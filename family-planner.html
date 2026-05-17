@@ -152,6 +152,10 @@
     <div class="row" style="margin-bottom:12px">
       <input class="input flex1" id="shop-input" placeholder="Add item…" onkeydown="if(event.key==='Enter')addShopItem()">
       <button class="btn btn-accent" onclick="addShopItem()">Add</button>
+    <div class="row" style="margin-bottom:12px; gap:8px;">
+      <button class="btn btn-outline" onclick="copyShoppingList()" style="font-size:13px;">📋 Copy List</button>
+      <button class="btn btn-outline" onclick="clearPurchased()" style="font-size:13px;">🗑️ Clear Purchased</button>
+    </div>
     </div>
     <div id="shopping-list"></div>
   </div>
