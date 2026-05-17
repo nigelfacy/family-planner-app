@@ -142,6 +142,7 @@
     <div class="row flex-wrap" style="margin-bottom:14px;gap:8px">
       <button class="btn btn-accent" onclick="autoSchedule()">🎲 Auto-schedule week</button>
       <button class="btn btn-outline" onclick="generateShoppingList()">🛒 Generate shopping list</button>
+      <button class="btn btn-outline" onclick="copyShoppingList()" style="margin-left:8px">📋 Copy List</button>
     </div>
     <div id="planner-days"></div>
   </div>
@@ -1042,21 +1043,25 @@ function renderShopping() {
     html = `<div class="card" style="text-align:center;padding:24px;color:var(--muted)"><div style="font-size:40px;margin-bottom:8px">🛒</div>Generate from the Meal Planner to populate your list</div>`;
   }
   unchecked.forEach(item => {
+    const woolworthsUrl = `https://www.woolworths.com.au/shop/search/products?searchTerm=${encodeURIComponent(item.name)}`;
     html += `<div class="shop-item ${item.inPantry?'in-pantry':''}">
       <div class="checkbox" onclick="toggleShopItem('${item.docId}')"></div>
       <div class="flex1">
         <div style="font-size:14px;font-weight:600">${item.name}</div>
         ${item.inPantry?`<div style="font-size:11px;color:var(--green)">✓ In pantry</div>`:''}
       </div>
+      <a href="${woolworthsUrl}" target="_blank" class="btn-ghost" style="font-size:12px;text-decoration:none;margin-right:4px" title="Search in Woolworths">🔍</a>
       <button class="btn-ghost" style="font-size:16px" onclick="removeShopItem('${item.docId}')" title="Remove">×</button>
     </div>`;
   });
   if (checked.length) {
     html += `<div style="font-size:12px;color:var(--muted);font-weight:700;margin:12px 0 8px">CHECKED OFF (${checked.length})</div>`;
     checked.forEach(item => {
+      const woolworthsUrl = `https://www.woolworths.com.au/shop/search/products?searchTerm=${encodeURIComponent(item.name)}`;
       html += `<div class="shop-item" style="opacity:0.5;cursor:pointer" onclick="toggleShopItem('${item.docId}')">
         <div class="checkbox checked">✓</div>
         <div style="font-size:14px;text-decoration:line-through">${item.name}</div>
+        <a href="${woolworthsUrl}" target="_blank" class="btn-ghost" style="font-size:12px;text-decoration:none;margin-right:4px" title="Search in Woolworths">🔍</a>
       </div>`;
     });
   }
@@ -1080,6 +1085,58 @@ window.toggleShopItem = async function(docId) {
 
 window.removeShopItem = async function(docId) {
   await fsDel("shoppingList/"+docId);
+}
+
+window.copyShoppingList = function() {
+  if (!STATE.shoppingList.length) {
+    showToast("No items to copy!");
+    return;
+  }
+  const unchecked = STATE.shoppingList.filter(x=>!x.checked);
+  const checked = STATE.shoppingList.filter(x=>x.checked);
+  
+  let text = "🛒 FAMILY PLANNER - SHOPPING LIST\n";
+  text += "=".repeat(40) + "\n\n";
+  
+  if (unchecked.length) {
+    text += "TO BUY:\n";
+    unchecked.forEach((item, i) => {
+      text += (i+1) + ". " + item.name + "\n";
+    });
+    text += "\n";
+  }
+  
+  if (checked.length) {
+    text += "CHECKED OFF:\n";
+    checked.forEach((item, i) => {
+      text += (i+1) + ". ✅ " + item.name + "\n";
+    });
+  }
+  
+  // Copy to clipboard
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(text).then(() => {
+      showToast("📋 Shopping list copied to clipboard!");
+    }).catch(err => fallbackCopy(text));
+  } else {
+    fallbackCopy(text);
+  }
+}
+
+function fallbackCopy(text) {
+  const textarea = document.createElement("textarea");
+  textarea.value = text;
+  textarea.style.position = "fixed";
+  textarea.style.opacity = "0";
+  document.body.appendChild(textarea);
+  textarea.select();
+  try {
+    document.execCommand("copy");
+    showToast("📋 Shopping list copied to clipboard!");
+  } catch (err) {
+    showToast("Failed to copy - please select and copy manually");
+  }
+  document.body.removeChild(textarea);
 }
 
 // ── PANTRY categories & emoji map ────────────────────────────────────────────
