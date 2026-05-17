@@ -1,0 +1,1785 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>Family Planner</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+  :root {
+    --bg: #0f1117; --surface: #1a1d27; --card: #21253a;
+    --accent: #f97316; --green: #22c55e; --red: #ef4444; --yellow: #eab308;
+    --text: #f1f5f9; --muted: #64748b; --border: #2e3347;
+  }
+  body { background: var(--bg); color: var(--text); font-family: 'Segoe UI', system-ui, sans-serif; min-height: 100vh; padding-bottom: 80px; }
+  input, select, button { font-family: inherit; }
+
+  /* Header */
+  .header { background: var(--surface); border-bottom: 1px solid var(--border); padding: 14px 16px; display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; z-index: 50; }
+  .header-title { font-size: 20px; font-weight: 800; color: var(--accent); }
+  .header-sub { font-size: 12px; color: var(--muted); }
+  .due-badge { background: #eab30820; border: 1px solid var(--yellow); border-radius: 10px; padding: 6px 12px; cursor: pointer; color: var(--yellow); font-size: 12px; font-weight: 700; }
+
+  /* Tabs */
+  .tabs { overflow-x: auto; display: flex; gap: 4px; padding: 10px 12px; background: var(--surface); border-bottom: 1px solid var(--border); scrollbar-width: none; }
+  .tabs::-webkit-scrollbar { display: none; }
+  .tab { white-space: nowrap; padding: 8px 14px; border-radius: 10px; border: none; cursor: pointer; font-weight: 700; font-size: 13px; transition: all .2s; background: var(--card); color: var(--muted); }
+  .tab.active { background: var(--accent); color: #fff; }
+
+  /* Content */
+  .content { padding: 14px 14px 0; }
+  .section { display: none; }
+  .section.active { display: block; }
+
+  /* Cards */
+  .card { background: var(--card); border-radius: 14px; padding: 14px; border: 1px solid var(--border); margin-bottom: 10px; }
+  .card.border-green { border-left: 3px solid var(--green); }
+  .card.border-red { border-left: 3px solid var(--red); }
+  .card.border-yellow { border-left: 3px solid var(--yellow); }
+  .card.border-accent { border: 1px solid #f9731640; }
+
+  /* Buttons */
+  .btn { padding: 10px 18px; border-radius: 10px; border: none; cursor: pointer; font-weight: 700; font-size: 14px; transition: opacity .2s; }
+  .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+  .btn-accent { background: var(--accent); color: #fff; }
+  .btn-green { background: var(--green); color: #fff; }
+  .btn-outline { background: transparent; border: 1.5px solid var(--accent); color: var(--accent); }
+  .btn-sm { padding: 6px 12px; font-size: 12px; border-radius: 8px; }
+  .btn-ghost { background: none; border: none; cursor: pointer; color: var(--muted); font-size: 20px; padding: 0; }
+
+  /* Inputs */
+  .input { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 10px 14px; color: var(--text); font-size: 14px; width: 100%; }
+  .input:focus { outline: none; border-color: var(--accent); }
+  select.input { appearance: none; }
+
+  /* Tags */
+  .tag { display: inline-block; font-size: 11px; padding: 2px 8px; border-radius: 20px; font-weight: 700; margin: 2px; }
+
+  /* Row helpers */
+  .row { display: flex; gap: 8px; align-items: center; }
+  .row-between { display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; }
+  .flex-wrap { flex-wrap: wrap; }
+  .flex1 { flex: 1; }
+
+  /* Alerts */
+  .alert-red { background: #ef444420; border: 1px solid #ef444440; border-radius: 10px; padding: 10px 12px; color: var(--red); font-size: 13px; margin-bottom: 10px; }
+  .alert-accent { background: #f9731620; border-radius: 8px; padding: 6px 10px; font-size: 12px; color: var(--accent); margin-bottom: 6px; }
+
+  /* Toast */
+  #toast { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%) translateY(80px); background: var(--green); color: #fff; padding: 12px 24px; border-radius: 14px; font-weight: 700; font-size: 14px; box-shadow: 0 8px 32px #0008; z-index: 200; white-space: nowrap; transition: transform .3s; pointer-events: none; }
+  #toast.show { transform: translateX(-50%) translateY(0); pointer-events: auto; }
+  #toast.error { background: var(--red); }
+
+  /* Loading */
+  #loading { position: fixed; inset: 0; background: var(--bg); display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 300; gap: 16px; }
+  .spinner { width: 40px; height: 40px; border: 3px solid var(--border); border-top-color: var(--accent); border-radius: 50%; animation: spin .8s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* Shopping item */
+  .shop-item { display: flex; align-items: center; gap: 10px; background: var(--card); border-radius: 12px; padding: 10px 14px; margin-bottom: 6px; border: 1px solid var(--border); }
+  .shop-item.in-pantry { border-color: #22c55e40; }
+  .checkbox { width: 22px; height: 22px; border-radius: 6px; border: 2px solid var(--accent); cursor: pointer; flex-shrink: 0; display: flex; align-items: center; justify-content: center; }
+  .checkbox.checked { background: var(--green); border-color: var(--green); }
+
+  /* Pantry grid */
+  .pantry-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .pantry-item { display: flex; align-items: center; background: var(--card); border-radius: 10px; padding: 10px 12px; border: 1px solid var(--border); gap: 6px; }
+
+  /* Allergen chips */
+  .allergen-chip { display: inline-flex; align-items: center; gap: 6px; background: #ef444420; border: 1px solid #ef444450; border-radius: 20px; padding: 6px 14px; margin: 4px; }
+  .allergen-chip span { color: var(--red); font-size: 13px; font-weight: 600; }
+
+  /* Meal card */
+  .meal-meta { font-size: 12px; color: var(--muted); }
+  .meal-components { font-size: 12px; color: var(--muted); margin-top: 4px; }
+
+  /* Cooked overlay */
+  .cooked-card { opacity: 0.6; border-left: 3px solid var(--green) !important; }
+
+  /* Sync indicator */
+  .sync-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--green); display: inline-block; margin-right: 6px; animation: pulse 2s infinite; }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
+</style>
+</head>
+<body>
+
+<div id="loading">
+  <div style="font-size:32px">🏡</div>
+  <div class="spinner"></div>
+  <div style="color:var(--muted);font-size:14px">Connecting to Family Planner…</div>
+</div>
+
+<div id="app" style="display:none">
+
+<!-- Header -->
+<div class="header">
+  <div>
+    <div class="header-title">🏡 Family Planner</div>
+    <div class="header-sub"><span class="sync-dot"></span>Live sync • Meals · Shopping · Pantry</div>
+  </div>
+  <div style="display:flex;gap:8px;align-items:center">
+    <div id="due-badge" class="due-badge" style="display:none" onclick="showTab('staples')"></div>
+    <button onclick="showTab('settings')" style="background:none;border:none;color:var(--muted);font-size:22px;cursor:pointer;padding:4px">⚙️</button>
+  </div>
+</div>
+
+<!-- Tabs -->
+<div class="tabs">
+  <button class="tab active" onclick="showTab('planner')">📅 Planner</button>
+  <button class="tab" onclick="showTab('shopping')">🛒 Shopping</button>
+  <button class="tab" onclick="showTab('pantry')">🏠 Pantry</button>
+  <button class="tab" onclick="showTab('meals')">🍽️ Meals</button>
+  <button class="tab" onclick="showTab('staples')">📦 Staples</button>
+  <button class="tab" onclick="showTab('allergens')">⚠️ Allergens</button>
+  <button class="tab" onclick="showTab('recipes')">🌐 Recipes</button>
+  <button class="tab" onclick="showTab('settings')">⚙️ Settings</button>
+</div>
+
+<div class="content">
+
+  <!-- ── PLANNER ─────────────────────────────────────────── -->
+  <div id="tab-planner" class="section active">
+    <div class="row flex-wrap" style="margin-bottom:14px;gap:8px">
+      <button class="btn btn-accent" onclick="autoSchedule()">🎲 Auto-schedule week</button>
+      <button class="btn btn-outline" onclick="generateShoppingList()">🛒 Generate shopping list</button>
+    </div>
+    <div id="planner-days"></div>
+  </div>
+
+  <!-- ── SHOPPING ───────────────────────────────────────── -->
+  <div id="tab-shopping" class="section">
+    <div class="row" style="margin-bottom:12px">
+      <input class="input flex1" id="shop-input" placeholder="Add item…" onkeydown="if(event.key==='Enter')addShopItem()">
+      <button class="btn btn-accent" onclick="addShopItem()">Add</button>
+    </div>
+    <div id="shopping-list"></div>
+  </div>
+
+  <!-- ── PANTRY ─────────────────────────────────────────── -->
+  <div id="tab-pantry" class="section">
+    <div style="margin-bottom:12px">
+      <div style="position:relative;margin-bottom:8px">
+        <input class="input" id="pantry-input" placeholder="Search existing or type new item…" autocomplete="off"
+          oninput="onPantrySearch()" onkeydown="onPantryKey(event)" style="width:100%">
+        <div id="pantry-suggestions" style="display:none;position:absolute;top:100%;left:0;right:0;background:var(--card);border:1px solid var(--accent);border-radius:0 0 10px 10px;z-index:20;max-height:180px;overflow-y:auto"></div>
+      </div>
+      <div class="row" style="gap:8px">
+        <div style="display:flex;align-items:center;gap:4px;background:var(--card);border:1px solid var(--border);border-radius:10px;padding:4px 8px">
+          <button onclick="adjustPantryQty(-0.5)" style="background:none;border:none;color:var(--accent);font-size:18px;cursor:pointer;padding:0 4px">−</button>
+          <input type="number" id="pantry-qty" value="1" min="0.5" step="0.5" style="width:44px;background:none;border:none;color:var(--text);font-size:14px;font-weight:700;text-align:center">
+          <button onclick="adjustPantryQty(0.5)" style="background:none;border:none;color:var(--accent);font-size:18px;cursor:pointer;padding:0 4px">+</button>
+        </div>
+        <button class="btn btn-accent flex1" onclick="addPantryItem()">+ Add to Pantry</button>
+        <input type="file" id="receipt-file" accept="image/*" style="display:none" onchange="scanReceipt(event)">
+        <button class="btn btn-outline" id="scan-btn" onclick="document.getElementById('receipt-file').click()">📷 Receipt</button>
+      </div>
+    </div>
+    <div id="pantry-count" style="font-size:13px;color:var(--muted);margin-bottom:10px"></div>
+    <div id="pantry-grid"></div>
+  </div>
+
+  <!-- ── MEALS ──────────────────────────────────────────── -->
+  <div id="tab-meals" class="section">
+    <div class="row flex-wrap" style="margin-bottom:14px;gap:8px">
+      <button class="btn btn-accent" onclick="toggleAddMeal()">+ Add Meal</button>
+      <button class="btn btn-outline" id="suggest-btn" onclick="getSuggestions()">✨ Browse Meals</button>
+    </div>
+    <div id="add-meal-form" class="card" style="display:none;margin-bottom:14px">
+      <div style="font-size:14px;font-weight:700;margin-bottom:10px">New Meal</div>
+      <input class="input" id="meal-name" placeholder="Meal name" style="margin-bottom:8px">
+      <input class="input" id="meal-components" placeholder="Ingredients (comma separated)" style="margin-bottom:8px">
+      <div class="row" style="gap:8px">
+        <input class="input" type="number" id="meal-time" placeholder="Cook time (min)" value="30" style="width:120px">
+        <button class="btn btn-accent" onclick="saveMeal()">Save</button>
+      </div>
+    </div>
+    <div id="suggestions-list"></div>
+    <div id="meal-preview" style="display:none"></div>
+    <div id="meals-list"></div>
+  </div>
+
+  <!-- ── STAPLES ────────────────────────────────────────── -->
+  <div id="tab-staples" class="section">
+    <div style="margin-bottom:14px">
+      <button class="btn btn-accent" onclick="toggleAddStaple()">+ Add Staple / Pet Supply</button>
+    </div>
+    <div id="add-staple-form" class="card" style="display:none;margin-bottom:14px">
+      <input class="input" id="staple-name" placeholder="Item name" style="margin-bottom:8px">
+      <div style="font-size:12px;color:var(--muted);margin-bottom:4px">Repeat every how many days?</div>
+      <div class="row" style="gap:8px">
+        <input class="input" type="number" id="staple-freq" placeholder="Days" value="30" style="width:120px">
+        <button class="btn btn-accent" onclick="saveStaple()">Save</button>
+      </div>
+    </div>
+    <div id="staples-list"></div>
+  </div>
+
+  <!-- ── ALLERGENS ──────────────────────────────────────── -->
+  <div id="tab-allergens" class="section">
+    <div class="alert-red" style="margin-bottom:14px">
+      <strong>⚠️ ANAPHYLAXIS ALERT</strong><br>
+      Your son has anaphylaxis to sesame seeds and tree nuts. These are flagged in all meal views. Manage the full list below.
+    </div>
+    <div class="row" style="margin-bottom:14px">
+      <input class="input flex1" id="allergen-input" placeholder="Add allergen or sensitivity…" onkeydown="if(event.key==='Enter')addAllergen()">
+      <button class="btn btn-accent" onclick="addAllergen()">Add</button>
+    </div>
+    <div id="allergens-list"></div>
+  </div>
+
+  <!-- ── RECIPES FROM WEB ──────────────────────────── -->
+  <div id="tab-recipes" class="section">
+    <div style="font-size:13px;color:var(--muted);margin-bottom:12px">Paste any recipe URL — we'll extract the ingredients and match them to Woolworths products for your shopping list.</div>
+
+    <div style="position:relative;margin-bottom:8px">
+      <input class="input" id="recipe-url" placeholder="Paste recipe URL… e.g. taste.com.au/recipes/…" style="width:100%;padding-right:80px">
+    </div>
+    <div class="row" style="gap:8px;margin-bottom:16px">
+      <button class="btn btn-accent flex1" id="fetch-recipe-btn" onclick="fetchRecipeURL()">🔍 Get Recipe</button>
+    </div>
+
+    <div id="recipe-result" style="display:none">
+      <!-- populated by JS -->
+    </div>
+
+    <div style="margin-top:20px">
+      <div style="font-size:12px;color:var(--muted);font-weight:700;margin-bottom:8px">TRY THESE SITES</div>
+      <div style="display:flex;flex-direction:column;gap:6px">
+        <a href="https://www.woolworths.com.au/shop/recipes" target="_blank" style="background:var(--card);border:1px solid var(--border);border-radius:10px;padding:10px 14px;color:var(--text);text-decoration:none;display:flex;align-items:center;gap:10px">
+          <span style="font-size:20px">🛒</span>
+          <div><div style="font-weight:700;font-size:13px">Woolworths Recipes</div><div style="font-size:11px;color:var(--muted)">woolworths.com.au/shop/recipes</div></div>
+        </a>
+        <a href="https://www.taste.com.au/recipes/collections/family-friendly" target="_blank" style="background:var(--card);border:1px solid var(--border);border-radius:10px;padding:10px 14px;color:var(--text);text-decoration:none;display:flex;align-items:center;gap:10px">
+          <span style="font-size:20px">🍽️</span>
+          <div><div style="font-weight:700;font-size:13px">Taste.com.au — Family</div><div style="font-size:11px;color:var(--muted)">taste.com.au family-friendly recipes</div></div>
+        </a>
+        <a href="https://www.kidgredients.com.au" target="_blank" style="background:var(--card);border:1px solid var(--border);border-radius:10px;padding:10px 14px;color:var(--text);text-decoration:none;display:flex;align-items:center;gap:10px">
+          <span style="font-size:20px">👶</span>
+          <div><div style="font-weight:700;font-size:13px">Kidgredients</div><div style="font-size:11px;color:var(--muted)">Fussy eater specialists</div></div>
+        </a>
+        <a href="https://www.superhealthykids.com" target="_blank" style="background:var(--card);border:1px solid var(--border);border-radius:10px;padding:10px 14px;color:var(--text);text-decoration:none;display:flex;align-items:center;gap:10px">
+          <span style="font-size:20px">🥦</span>
+          <div><div style="font-weight:700;font-size:13px">Super Healthy Kids</div><div style="font-size:11px;color:var(--muted)">Kid-approved healthy dinners</div></div>
+        </a>
+        <a href="https://www.justonecookbook.com/category/main-course" target="_blank" style="background:var(--card);border:1px solid var(--border);border-radius:10px;padding:10px 14px;color:var(--text);text-decoration:none;display:flex;align-items:center;gap:10px">
+          <span style="font-size:20px">🍜</span>
+          <div><div style="font-weight:700;font-size:13px">Just One Cookbook</div><div style="font-size:11px;color:var(--muted)">Simple Japanese / Asian family meals</div></div>
+        </a>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── SETTINGS ──────────────────────────────────── -->
+  <div id="tab-settings" class="section">
+
+    <div class="card" style="margin-bottom:12px">
+      <div style="font-weight:700;font-size:15px;margin-bottom:4px">🤖 AI Settings</div>
+      <div style="font-size:12px;color:var(--muted);margin-bottom:12px">Used for receipt scanning, meal suggestions and recipe import. Get a free key at <a href="https://openrouter.ai" target="_blank" style="color:var(--accent)">openrouter.ai</a></div>
+
+      <div style="margin-bottom:10px">
+        <div style="font-size:12px;color:var(--muted);font-weight:700;margin-bottom:4px">OPENROUTER API KEY</div>
+        <div style="display:flex;gap:8px">
+          <input class="input flex1" type="password" id="or-api-key" placeholder="sk-or-v1-…" oninput="settingsChanged()">
+          <button class="btn btn-sm" id="key-toggle" onclick="toggleKeyVisibility()" style="background:var(--surface);border:1px solid var(--border);color:var(--muted);border-radius:8px;padding:6px 10px">👁</button>
+        </div>
+        <div id="key-status" style="font-size:11px;margin-top:4px"></div>
+      </div>
+
+      <div style="margin-bottom:12px">
+        <div style="font-size:12px;color:var(--muted);font-weight:700;margin-bottom:4px">MODEL</div>
+        <select class="input" id="or-model" onchange="settingsChanged()">
+          <optgroup label="🆓 Top Free Models (May 2026)">
+            <option value="tencent/hy3-preview-20260421:free">🥇 Hy3 Preview — Tencent #1 on OpenRouter (Free)</option>
+            <option value="google/gemini-3-flash-preview-20251217">🥈 Gemini 3 Flash Preview — Google (Free preview)</option>
+            <option value="deepseek/deepseek-v4-flash-20260423:free">DeepSeek V4 Flash — #9 overall (Free)</option>
+            <option value="minimax/minimax-m2.7-20260318:free">MiniMax M2.7 (Free)</option>
+            <option value="openai/gpt-oss-120b:free">GPT OSS 120B — OpenAI open-weight (Free)</option>
+            <option value="meta-llama/llama-3.3-70b-instruct:free">Llama 3.3 70B — Meta (Free)</option>
+            <option value="mistralai/mistral-7b-instruct:free">Mistral 7B (Free)</option>
+            <option value="openrouter/free">🎲 Auto-select best free model</option>
+          </optgroup>
+          <optgroup label="💰 Top Paid Models (May 2026)">
+            <option value="moonshotai/kimi-k2.6-20260420">🥈 Kimi K2.6 — Moonshot #2 overall</option>
+            <option value="anthropic/claude-4.6-sonnet-20260217">🥉 Claude Sonnet 4.6 — Anthropic #3</option>
+            <option value="anthropic/claude-4.7-opus-20260416">Claude Opus 4.7 — Anthropic #5 (powerful)</option>
+            <option value="deepseek/deepseek-v3.2-20251201">DeepSeek V3.2 — #6 overall (cheap)</option>
+            <option value="stepfun/step-3.5-flash">Step 3.5 Flash — StepFun #7 (fast)</option>
+            <option value="x-ai/grok-4.1-fast">Grok 4.1 Fast — xAI #10</option>
+            <option value="anthropic/claude-haiku-4-5">Claude Haiku 4.5 — fastest Claude (cheap)</option>
+            <option value="openai/gpt-4o">GPT-4o — OpenAI</option>
+            <option value="openai/gpt-4o-mini">GPT-4o Mini — OpenAI (cheap)</option>
+            <option value="google/gemini-2.0-flash-001">Gemini 2.0 Flash — Google (cheap)</option>
+          </optgroup>
+        </select>
+        <div style="font-size:11px;color:var(--muted);margin-top:4px">Rankings based on live OpenRouter data May 2026 · For receipt photo scanning use a vision model (Hy3, Gemini, Claude, GPT-4o) · <a href="https://openrouter.ai/rankings" target="_blank" style="color:var(--accent)">View live rankings ↗</a></div>
+      </div>
+
+      <div style="display:flex;gap:8px">
+        <button class="btn btn-accent flex1" onclick="saveSettings()">💾 Save Settings</button>
+        <button class="btn btn-outline btn-sm" onclick="testAI()">🧪 Test</button>
+      </div>
+      <div id="test-result" style="font-size:12px;margin-top:8px"></div>
+    </div>
+
+    <button class="btn btn-outline" id="enable-push-btn" style="margin-top:10px;width:100%" onclick="requestPushPermission()">🔔 Enable Staple Due Notifications</button>
+
+    <div class="card" style="margin-bottom:12px">
+      <div style="font-weight:700;font-size:15px;margin-bottom:8px">ℹ️ About</div>
+      <div style="font-size:13px;color:var(--muted);line-height:1.6">
+        Family Planner syncs in real time via Firebase — both you and your wife see the same data instantly.<br><br>
+        AI features use your OpenRouter key. Free models work great for most tasks. For receipt photo scanning, use a vision model (Gemini 2.0 Flash free works well).<br><br>
+        <a href="https://openrouter.ai/models" target="_blank" style="color:var(--accent)">Browse all OpenRouter models ↗</a>
+      </div>
+    </div>
+
+  </div>
+
+</div><!-- /content -->
+</div><!-- /app -->
+
+<div id="toast"></div>
+<div id="cook-modal" style="display:none;position:fixed;inset:0;background:#000a;z-index:100;align-items:center;justify-content:center;padding:16px"></div>
+<div id="change-meal-sheet" style="display:none;position:fixed;inset:0;background:#000a;z-index:100;align-items:flex-end;justify-content:center" onclick="if(event.target===this)this.style.display='none'"></div>
+
+<!-- ═══════════════════════════════════════════════════════════ FIREBASE + APP -->
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/12.13.0/firebase-app.js";
+import { getFirestore, doc, collection, onSnapshot, setDoc, updateDoc, deleteDoc, getDoc, getDocs } from "https://www.gstatic.com/firebasejs/12.13.0/firebase-firestore.js";
+import { enableIndexedDbPersistence } from "https://www.gstatic.com/firebasejs/12.13.0/firebase-firestore.js";
+import { getMessaging, getToken, onMessage } from "https://www.gstatic.com/firebasejs/12.13.0/firebase-messaging.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyAEL60CjebAqB-mXf3dH6DOE1vCZUib878",
+  authDomain: "family-planner-5ed4a.firebaseapp.com",
+  projectId: "family-planner-5ed4a",
+  storageBucket: "family-planner-5ed4a.firebasestorage.app",
+  messagingSenderId: "879804127563",
+  appId: "1:879804127563:web:7321260d1efbb85dba70ce",
+  measurementId: "G-HZR87L744C"
+};
+
+const fbApp = initializeApp(firebaseConfig);
+const db = getFirestore(fbApp);
+const messaging = getMessaging(fbApp);
+
+async function requestPushPermission() {
+  try {
+    const permission = await Notification.requestPermission();
+    if (permission === 'granted') {
+      console.log('Push permission granted');
+      showToast("Notifications enabled! ✓");
+    }
+  } catch (err) {
+    console.log('Push permission error:', err);
+  }
+}
+
+onMessage(messaging, (payload) => {
+  showToast(`⏰ ${payload.notification?.title || 'Reminder'}: ${payload.notification?.body || ''}`);
+});
+
+enableIndexedDbPersistence(db).catch(err => console.log('Persistence failed:', err));
+
+// ── Default data ──────────────────────────────────────────────────────────────
+const DEFAULT_ALLERGENS = ["sesame seeds","sesame oil","tahini","almonds","cashews","walnuts","pecans","pistachios","hazelnuts","macadamia","pine nuts","brazil nuts"];
+const DAYS = ["Mon","Tue","Wed","Thu","Fri","Sat","Sun"];
+const INITIAL_MEALS = [
+  {id:"m1",name:"Spaghetti Bolognese",components:["spaghetti","beef mince","tomato sauce","onion","garlic","parmesan"],tags:["pasta","kids-approved"],time:30},
+  {id:"m2",name:"Creamy Tomato Pasta",components:["penne","cream","tinned tomatoes","garlic","basil","parmesan"],tags:["pasta","kids-approved"],time:25},
+  {id:"m3",name:"Sausages & Veg",components:["sausages","peas","corn","mashed potato","gravy"],tags:["kids-approved","quick"],time:25},
+  {id:"m4",name:"Steak Night",components:["beef steak","salad leaves","cherry tomatoes","cucumber","olive oil","lemon"],tags:["adults-love"],time:20},
+  {id:"m5",name:"Burrito Bowl Night",components:["beef mince","tortillas","rice","cheese","sour cream","salsa","lettuce","corn","beans"],tags:["kids-approved","build-your-own"],time:35},
+  {id:"m6",name:"Pasta Bake",components:["penne","tinned tomatoes","cheese","beef mince","onion","garlic"],tags:["pasta","kids-approved"],time:45},
+  {id:"m7",name:"Chicken Stir Fry",components:["chicken breast","broccoli","capsicum","carrot","soy sauce","garlic","rice"],tags:["healthy","adults-love"],time:25},
+  {id:"m8",name:"Taco Night",components:["taco shells","beef mince","cheese","sour cream","salsa","lettuce","tomato"],tags:["kids-approved","build-your-own"],time:30},
+  {id:"m9",name:"BBQ Sausages & Salad",components:["sausages","mixed salad leaves","tomato","cucumber","feta","balsamic"],tags:["quick","adults-love"],time:20},
+  {id:"m10",name:"Chicken Schnitzel",components:["chicken breast","breadcrumbs","egg","flour","mashed potato","peas"],tags:["kids-approved"],time:30},
+  {id:"m11",name:"Aldi Butter Chicken & Rice",components:["Aldi butter chicken simmer sauce","chicken breast","white rice","cream","onion"],tags:["kids-approved","quick"],time:25,special:"aldi"},
+  {id:"m12",name:"🍕 Takeaway Night",components:[],tags:["takeaway"],time:0,special:"takeaway"},
+];
+const INITIAL_STAPLES = [
+  {id:"s1",name:"Toothbrushes",frequencyDays:60,lastBought:null},
+  {id:"s2",name:"Dishwasher tablets",frequencyDays:45,lastBought:null},
+  {id:"s3",name:"Toilet paper (24pk)",frequencyDays:21,lastBought:null},
+  {id:"s4",name:"Dog food",frequencyDays:42,lastBought:null},
+  {id:"s5",name:"Dog flea tablets",frequencyDays:90,lastBought:null},
+  {id:"s6",name:"Laundry detergent",frequencyDays:30,lastBought:null},
+];
+
+// ── State (live from Firestore) ───────────────────────────────────────────────
+let STATE = { meals:[], pantry:[], shoppingList:[], allergens:[], staples:[], weekPlan:{}, cookedMeals:{} };
+
+// ── OpenRouter AI wrapper ─────────────────────────────────────────────────────
+function getAIConfig() {
+  return {
+    key: localStorage.getItem("or_api_key") || "",
+    model: localStorage.getItem("or_model") || "tencent/hy3-preview-20260421:free"
+  };
+}
+
+async function callAI(messages, useVision=false) {
+  const {key, model} = getAIConfig();
+  if (!key) throw new Error("No API key set — go to ⚙️ Settings to add your OpenRouter key");
+
+  // For vision tasks, auto-upgrade free model to vision-capable if needed
+  let activeModel = model;
+  if (useVision && model.includes(":free") && !model.includes("gemini")) {
+    activeModel = "tencent/hy3-preview-20260421:free"; // best free vision model
+  }
+
+  const resp = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "Authorization": "Bearer " + key,
+      "HTTP-Referer": window.location.href,
+      "X-Title": "Family Planner"
+    },
+    body: JSON.stringify({
+      model: activeModel,
+      max_tokens: 2000,
+      messages: messages
+    })
+  });
+
+  const data = await resp.json();
+  if (data.error) throw new Error(data.error.message || JSON.stringify(data.error));
+  if (!data.choices || !data.choices.length) throw new Error('No response from model — try a different model in Settings');
+  return data.choices[0].message.content;
+}
+
+async function callAIWithImage(base64, mediaType, prompt) {
+  const {key, model} = getAIConfig();
+  if (!key) throw new Error("No API key set — go to ⚙️ Settings");
+
+  // Always use a vision-capable model for images
+  let visionModel = model;
+  const visionModels = ["gemini","claude","gpt-4o","llava","pixtral","qwen-vl"];
+  const isVision = visionModels.some(v => visionModel.includes(v));
+  if (!isVision) visionModel = "tencent/hy3-preview-20260421:free";
+
+  const resp = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "Authorization": "Bearer " + key,
+      "HTTP-Referer": window.location.href,
+      "X-Title": "Family Planner"
+    },
+    body: JSON.stringify({
+      model: visionModel,
+      max_tokens: 1000,
+      messages: [{
+        role: "user",
+        content: [
+          { type: "image_url", image_url: { url: "data:" + mediaType + ";base64," + base64 } },
+          { type: "text", text: prompt }
+        ]
+      }]
+    })
+  });
+
+  const data = await resp.json();
+  if (data.error) throw new Error(data.error.message || JSON.stringify(data.error));
+  if (!data.choices || !data.choices.length) throw new Error('No response from model — try a different model in Settings');
+  return data.choices[0].message.content;
+}
+
+// ── Settings functions ────────────────────────────────────────────────────────
+window.settingsChanged = function() {
+  document.getElementById("key-status").textContent = "";
+}
+
+window.toggleKeyVisibility = function() {
+  const input = document.getElementById("or-api-key");
+  input.type = input.type === "password" ? "text" : "password";
+}
+
+window.saveSettings = function() {
+  const key = document.getElementById("or-api-key").value.trim();
+  const model = document.getElementById("or-model").value;
+  if (key) localStorage.setItem("or_api_key", key);
+  localStorage.setItem("or_model", model);
+  document.getElementById("key-status").textContent = "✓ Saved";
+  document.getElementById("key-status").style.color = "var(--green)";
+  showToast("Settings saved ✓");
+}
+
+window.testAI = async function() {
+  const result = document.getElementById("test-result");
+  result.textContent = "Testing…";
+  result.style.color = "var(--muted)";
+  try {
+    const resp = await callAI([{role:"user", content:"Reply with exactly: OK"}]);
+    result.textContent = "✓ Connected! Model replied: " + resp.trim().substring(0,50);
+    result.style.color = "var(--green)";
+  } catch(e) {
+    result.textContent = "✗ " + e.message;
+    result.style.color = "var(--red)";
+  }
+}
+
+// Load saved settings into form when settings tab opens
+function loadSettingsUI() {
+  const key = localStorage.getItem("or_api_key") || "";
+  const model = localStorage.getItem("or_model") || "tencent/hy3-preview-20260421:free";
+  const keyInput = document.getElementById("or-api-key");
+  const modelSelect = document.getElementById("or-model");
+  if (keyInput) keyInput.value = key;
+  if (modelSelect) modelSelect.value = model;
+  if (key) {
+    const status = document.getElementById("key-status");
+    if (status) { status.textContent = "✓ Key saved"; status.style.color = "var(--green)"; }
+  }
+}
+
+// ── Firestore helpers ─────────────────────────────────────────────────────────
+const ref = (path) => doc(db, path);
+const colRef = (path) => collection(db, path);
+
+async function fsSet(path, data) { await setDoc(ref(path), data); }
+async function fsDel(path) { await deleteDoc(ref(path)); }
+
+// Pre-populated pantry from Woolworths/Aldi receipt history
+const INITIAL_PANTRY = [
+  // Dairy & Fridge
+  "Full cream milk", "Low fat milk", "Tasty shredded cheese", "Sour cream", "Butter",
+  "Eggs (free range)", "Greek style yoghurt", "Fetta cheese", "Mozzarella cheese",
+  // Meat
+  "Beef mince (extra lean)", "Chicken schnitzels", "Beef sausages", "Shortcut bacon",
+  "Pork mince",
+  // Pasta & Rice
+  "Spaghetti pasta", "Penne pasta", "Spirals pasta", "White rice",
+  // Pantry staples
+  "Tomato passata", "Crushed tomatoes", "Tomato sauce", "Olive oil spray", "Sunflower oil",
+  "Garlic (minced)", "Taco seasoning", "Taco shells", "Corn chips", "Wraps",
+  // Fruit & Veg
+  "Sweet potato", "Broccoli", "Corn", "Avocado", "Cherry tomatoes", "Baby spinach",
+  "Baby rocket", "Cucumber", "Zucchini", "Carrots", "Spring onion",
+  // Snacks & lunchbox
+  "Cobs popcorn multipack", "Rice cakes", "Arnotts Jatz crackers",
+  // Sauces & condiments
+  "American mustard", "Whole egg mayonnaise", "Kikkoman teriyaki sauce",
+  // Frozen
+  "Peters Drumstick minis",
+  // Bread & Bakery
+  "Wraps (large)", "Pitta bread",
+  // Frozen desserts & treats
+  "Peters Drumstick minis (6pk)", "Blue Ribbon ice cream tub", "Golden Gaytime 4pk", "Peters Twin Poles",
+  // Friday lollies
+  "Woolworths Belgian chocolate block", "Cadbury Dairy Milk", "Peters Drumstick minis (6pk)",
+  "Snakes lollies", "Party Mix lollies", "Sour Patch Kids",
+];
+
+// Seed initial data if collections are empty
+async function seedIfEmpty() {
+  const snap = await getDocs(colRef("meals"));
+  if (snap.empty) {
+    for (const m of INITIAL_MEALS) await setDoc(doc(db,"meals",m.id), m);
+  }
+  const snap2 = await getDocs(colRef("staples"));
+  if (snap2.empty) {
+    for (const s of INITIAL_STAPLES) await setDoc(doc(db,"staples",s.id), s);
+  }
+  const snap3 = await getDocs(colRef("allergens"));
+  if (snap3.empty) {
+    for (const a of DEFAULT_ALLERGENS) await setDoc(doc(db,"allergens",a.replace(/\s/g,"_")), {name:a});
+  }
+  const snap4 = await getDoc(ref("app/weekPlan"));
+  if (!snap4.exists()) await setDoc(ref("app/weekPlan"), {});
+  const snap5 = await getDoc(ref("app/cookedMeals"));
+  if (!snap5.exists()) await setDoc(ref("app/cookedMeals"), {});
+  // Seed pantry from receipt history if empty
+  const snap6 = await getDocs(colRef("pantry"));
+  if (snap6.empty) {
+    for (const name of INITIAL_PANTRY) {
+      const id = "p_seed_" + name.replace(/\s+/g,"_").toLowerCase();
+      await setDoc(doc(db,"pantry",id), {id, name, qty:1, addedAt: new Date().toISOString()});
+    }
+  }
+}
+
+// ── Live listeners ────────────────────────────────────────────────────────────
+function startListeners() {
+  onSnapshot(colRef("meals"), snap => {
+    STATE.meals = snap.docs.map(d=>d.data());
+    renderAll();
+  });
+  onSnapshot(colRef("pantry"), snap => {
+    STATE.pantry = snap.docs.map(d=>d.data());
+    renderAll();
+  });
+  onSnapshot(colRef("shoppingList"), snap => {
+    STATE.shoppingList = snap.docs.map(d=>({...d.data(), docId:d.id}));
+    renderAll();
+  });
+  onSnapshot(colRef("allergens"), snap => {
+    STATE.allergens = snap.docs.map(d=>d.data().name);
+    renderAll();
+  });
+  onSnapshot(colRef("staples"), snap => {
+    STATE.staples = snap.docs.map(d=>d.data());
+    renderAll();
+  });
+  onSnapshot(ref("app/weekPlan"), snap => {
+    STATE.weekPlan = snap.exists() ? snap.data() : {};
+    renderAll();
+  });
+  onSnapshot(ref("app/cookedMeals"), snap => {
+    STATE.cookedMeals = snap.exists() ? snap.data() : {};
+    renderAll();
+  });
+}
+
+// ── Init ──────────────────────────────────────────────────────────────────────
+async function init() {
+  await seedIfEmpty();
+  startListeners();
+  document.getElementById("loading").style.display = "none";
+  document.getElementById("app").style.display = "block";
+}
+init().catch(e => {
+  document.getElementById("loading").innerHTML = `<div style="color:var(--red);padding:20px;text-align:center">Connection failed.<br>${e.message}</div>`;
+});
+
+// ── Helpers ───────────────────────────────────────────────────────────────────
+function allergenCheck(components) {
+  const hits = [];
+  const str = (components||[]).join(" ").toLowerCase();
+  STATE.allergens.forEach(a => { if(str.includes(a.toLowerCase())) hits.push(a); });
+  return hits;
+}
+
+function daysDue(lastBought, freq) {
+  if (!lastBought) return 0;
+  const diff = Math.floor((Date.now()-new Date(lastBought))/86400000);
+  return freq - diff;
+}
+
+function tagHtml(t) {
+  const map = {"kids-approved":["#22c55e","✓ Kids"],"adults-love":["#f97316","♥ Adults"],"pasta":["#eab308","🍝 Pasta"],"quick":["#22c55e","⚡ Quick"],"build-your-own":["#a78bfa","🎨 DIY"],"healthy":["#22c55e","🥗 Healthy"],"takeaway":["#f97316","🛵 Takeaway"],"aldi":["#ef4444","🔴 Aldi"]};
+  const [c,l] = map[t]||["#64748b",t];
+  return `<span class="tag" style="background:${c}30;color:${c}">${l}</span>`;
+}
+
+let toastTimer;
+window.showToast = function(msg, isError=false) {
+  const t = document.getElementById("toast");
+  t.textContent = msg;
+  t.className = isError ? "error show" : "show";
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(()=>t.className="", 2500);
+}
+
+// ── Tab switching ─────────────────────────────────────────────────────────────
+window.showTab = function(id) {
+  document.querySelectorAll(".section").forEach(s=>s.classList.remove("active"));
+  document.querySelectorAll(".tab").forEach(t=>t.classList.remove("active"));
+  document.getElementById("tab-"+id).classList.add("active");
+  document.querySelectorAll(".tab").forEach(t=>{
+    const oc = t.getAttribute("onclick")||"";
+    if(oc.includes("'"+id+"'") || oc.includes('"'+id+'"')) t.classList.add("active");
+  });
+  if (id==="settings") loadSettingsUI();
+}
+
+// ── Render all ────────────────────────────────────────────────────────────────
+function renderAll() {
+  renderPlanner();
+  renderShopping();
+  renderPantry();
+  renderMeals();
+  renderStaples();
+  renderAllergens();
+  renderDueBadge();
+}
+
+// ── PLANNER ───────────────────────────────────────────────────────────────────
+// ── Treat & dessert data ─────────────────────────────────────────────────────
+const FRIDAY_LOLLIES = [
+  "Woolworths Belgian chocolate block","Cadbury Dairy Milk","Snakes lollies",
+  "Party Mix lollies","Sour Patch Kids","Red Frogs","Fantales","Milky Way minis",
+  "Maltesers","M&Ms","Skittles","Starburst"
+];
+const DESSERT_OPTIONS = [
+  "Peters Drumstick minis","Blue Ribbon ice cream tub","Golden Gaytime 4pk",
+  "Peters Twin Poles","Connoisseur minis","Magnum minis","Weis mango bar",
+  "Peters lil pops","Cadbury ice cream log"
+];
+const TAKEAWAY_OPTIONS = [
+  "🍕 Pizza","🍔 Burgers","🍜 Noodles / Asian","🌮 Mexican","🍗 KFC / Chicken",
+  "🍣 Sushi","🥗 Salad bar","🐟 Fish & Chips","🍛 Indian curry","😴 Leftovers"
+];
+
+// Get Mon–Sun dates for current week
+function getWeekDates() {
+  const now = new Date();
+  const day = now.getDay(); // 0=Sun
+  // Start from Monday
+  const monday = new Date(now);
+  monday.setDate(now.getDate() - ((day + 6) % 7));
+  return Array.from({length:7}, (_,i) => {
+    const d = new Date(monday);
+    d.setDate(monday.getDate() + i);
+    return d;
+  });
+}
+
+function isToday(date) {
+  const now = new Date();
+  return date.getDate()===now.getDate() && date.getMonth()===now.getMonth();
+}
+function isPast(date) {
+  const now = new Date();
+  now.setHours(0,0,0,0);
+  return date < now;
+}
+
+// Change-meal sheet (slide-up panel)
+let changeMealDay = null;
+window.openChangeMeal = function(day) {
+  changeMealDay = day;
+  const sheet = document.getElementById("change-meal-sheet");
+  sheet.style.display = "flex";
+  const plan = getPlanForDay(day);
+  const mealId = plan.mealId;
+  sheet.innerHTML = `
+    <div style="background:var(--card);border-radius:18px 18px 0 0;padding:20px;width:100%;max-height:80vh;overflow-y:auto;border-top:2px solid var(--accent)">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
+        <div style="font-weight:800;font-size:16px">Change ${day}'s Dinner</div>
+        <button onclick="document.getElementById('change-meal-sheet').style.display='none'" style="background:none;border:none;color:var(--muted);font-size:24px;cursor:pointer">×</button>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:8px">
+        <button onclick="assignDinner('${day}','__takeaway__');document.getElementById('change-meal-sheet').style.display='none'" style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:12px 14px;color:var(--text);text-align:left;cursor:pointer;font-size:14px">
+          🛵 Takeaway night
+        </button>
+        ${STATE.meals.filter(m=>!m.special||m.special==='aldi').map(m=>`
+          <button onclick="assignDinner('${day}','${m.id}');document.getElementById('change-meal-sheet').style.display='none'" style="background:${mealId===m.id?'var(--accent)20':'var(--surface)'};border:1px solid ${mealId===m.id?'var(--accent)':'var(--border)'};border-radius:10px;padding:12px 14px;color:var(--text);text-align:left;cursor:pointer">
+            <div style="font-size:14px;font-weight:700">${m.name}</div>
+            <div style="font-size:11px;color:var(--muted)">⏱ ${m.time||'?'}min · ${(m.tags||[]).map(t=>tagHtml(t)).join('')}</div>
+          </button>`).join('')}
+      </div>
+    </div>`;
+}
+
+// ── PLANNER ───────────────────────────────────────────────────────────────────
+function renderPlanner() {
+  const el = document.getElementById("planner-days");
+  const weekDates = getWeekDates();
+
+  el.innerHTML = DAYS.map((day, idx) => {
+    const date = weekDates[idx];
+    const plan = getPlanForDay(day);
+    const mealId = plan.mealId;
+    const takeaway = plan.takeaway;
+    const dessert = plan.dessert;
+    const lollies = plan.lollies;
+    const meal = STATE.meals.find(m=>m.id===mealId);
+    const cooked = STATE.cookedMeals[day];
+    const hits = meal ? allergenCheck(meal.components) : [];
+    const isFriday = day === "Fri";
+    const today = isToday(date);
+    const past = isPast(date) && !today;
+    const dateStr = date.toLocaleDateString('en-AU', {day:'numeric', month:'short'});
+    const dessertItem = dessert ? STATE.pantry.find(p=>p.name===dessert) : null;
+
+    return `
+      <div class="card ${cooked?'cooked-card':''}" style="${today?'border-left:3px solid var(--accent)':''}${past&&!cooked?'opacity:0.7':''}">
+
+        <!-- Day header -->
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+          <div>
+            <span style="font-size:12px;font-weight:800;color:${today?'var(--accent)':'var(--muted)'}">${day.toUpperCase()} ${dateStr}</span>
+            ${today?`<span style="background:var(--accent);color:#fff;font-size:9px;font-weight:700;padding:2px 6px;border-radius:10px;margin-left:6px">TODAY</span>`:''}
+            ${isFriday?`<span style="font-size:12px;margin-left:4px">🍬</span>`:''}
+          </div>
+          ${cooked?`<span style="font-size:11px;color:var(--green);font-weight:700">✅ Done</span>`:''}
+        </div>
+
+        <!-- Dinner -->
+        <div style="margin-bottom:10px">
+          ${takeaway ? `
+            <div style="font-weight:700;font-size:16px;margin-bottom:4px">🛵 ${takeaway}</div>
+            <div style="margin-bottom:8px"><span class="tag" style="background:#f9731630;color:var(--accent)">Takeaway</span></div>
+          ` : meal ? `
+            <div style="font-weight:800;font-size:16px;margin-bottom:4px">
+              ${cooked?'✅ ':''}${meal.name}
+              ${meal.time?`<span style="font-size:12px;color:var(--muted);font-weight:400;margin-left:6px">⏱ ${meal.time}min</span>`:''}
+              ${meal.special==='aldi'?`<span class="tag" style="background:#ef444420;color:var(--red);margin-left:4px">🔴 Aldi</span>`:''}
+            </div>
+            <div style="margin-bottom:6px">${(meal.tags||[]).filter(t=>t!=='takeaway'&&t!=='aldi').map(tagHtml).join('')}</div>
+            ${meal.tags&&meal.tags.includes('build-your-own')?`<div class="alert-accent" style="font-size:11px;margin-bottom:6px">🎨 Put components on table — kids choose</div>`:''}
+            ${meal.components&&meal.components.length?`<div class="meal-components" style="font-size:12px">${meal.components.join(' · ')}</div>`:''}
+            ${hits.length?`<div style="color:var(--red);font-size:11px;font-weight:700;margin-top:4px">⚠️ Allergen: ${hits.join(', ')}</div>`:''}
+          ` : `<div style="color:var(--muted);font-size:14px">No dinner set</div>`}
+        </div>
+
+        <!-- Action buttons -->
+        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:${(dessert||isFriday)?'10px':'0'}">
+          ${!cooked?`<button onclick="openChangeMeal('${day}')" style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:6px 14px;color:var(--text);font-size:12px;font-weight:700;cursor:pointer;flex:1">✏️ Change meal</button>`:''}
+          ${meal&&!cooked&&!takeaway?`<button class="btn btn-green btn-sm" onclick="markCooked('${day}')" style="flex:1">✓ Cooked</button>`:''}
+          ${cooked?`<button onclick="undoCooked('${day}')" style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:6px 14px;color:var(--muted);font-size:12px;font-weight:700;cursor:pointer">↩ Undo</button>`:''}
+        </div>
+
+        <!-- Takeaway picker -->
+        ${takeaway&&!cooked?`
+          <select class="input" style="font-size:12px;padding:6px 8px;margin-bottom:10px" onchange="assignTakeaway('${day}',this.value)">
+            ${TAKEAWAY_OPTIONS.map(t=>`<option value="${t}" ${takeaway===t?'selected':''}>${t}</option>`).join('')}
+          </select>`:'' }
+
+        <!-- Dessert -->
+        <div style="border-top:1px solid var(--border);padding-top:8px;margin-bottom:${isFriday?'8px':'0'}">
+          <div style="display:flex;align-items:center;gap:8px">
+            <span style="font-size:11px;color:var(--muted);white-space:nowrap">🍨 Dessert</span>
+            <select class="input" style="flex:1;padding:4px 6px;font-size:11px" onchange="assignDessert('${day}',this.value)">
+              <option value="">none tonight</option>
+              ${DESSERT_OPTIONS.map(d=>`<option value="${d}" ${dessert===d?'selected':''}>${d}</option>`).join('')}
+            </select>
+          </div>
+          ${dessert?`<div style="font-size:11px;margin-top:4px;padding-left:2px">
+            ${dessertItem?`<span style="color:var(--green)">✓ In pantry ×${(dessertItem.qty||1)%1===0?dessertItem.qty||1:(dessertItem.qty||1).toFixed(1)}</span>`:`<span style="color:var(--yellow)">🛒 Need to buy</span>`}
+          </div>`:''}
+        </div>
+
+        <!-- Friday lollies -->
+        ${isFriday?`
+        <div style="border-top:1px solid var(--border);padding-top:8px">
+          <div style="display:flex;align-items:center;gap:8px">
+            <span style="font-size:11px;color:#f472b6;white-space:nowrap">🍬 Lollies</span>
+            <select class="input" style="flex:1;padding:4px 6px;font-size:11px" onchange="assignLollies('${day}',this.value)">
+              <option value="">pick…</option>
+              ${FRIDAY_LOLLIES.map(l=>`<option value="${l}" ${lollies===l?'selected':''}>${l}</option>`).join('')}
+            </select>
+          </div>
+          ${lollies?`<div style="font-size:11px;color:#f472b6;margin-top:4px">🍬 ${lollies}</div>`:''}
+        </div>`:''}
+
+      </div>`;
+  }).join('');
+}
+
+
+window.autoSchedule = async function() {
+  const cookable = STATE.meals.filter(m=>!m.special||m.special==='aldi');
+  const shuffled = [...cookable].sort(()=>Math.random()-.5);
+  const plan = {};
+  const desserts = [...DESSERT_OPTIONS].sort(()=>Math.random()-.5);
+  DAYS.forEach((d,i)=>{
+    const existing = getPlanForDay(d);
+    plan[d] = {
+      ...existing,
+      mealId: shuffled[i%shuffled.length].id,
+      dessert: desserts[i%desserts.length]
+    };
+    delete plan[d].takeaway; // clear any takeaway from previous week
+  });
+  await setDoc(ref("app/weekPlan"), plan);
+  await setDoc(ref("app/cookedMeals"), {});
+  showToast("Week auto-scheduled! ✨");
+}
+
+function getPlanForDay(day) {
+  const p = STATE.weekPlan[day];
+  if (!p) return {};
+  if (typeof p === "string") return {mealId: p};
+  return p;
+}
+
+window.assignDinner = async function(day, val) {
+  const plan = {...STATE.weekPlan};
+  const dayPlan = {...getPlanForDay(day)};
+  if (val === "__takeaway__") {
+    dayPlan.takeaway = TAKEAWAY_OPTIONS[0];
+    delete dayPlan.mealId;
+  } else if (val) {
+    dayPlan.mealId = val;
+    delete dayPlan.takeaway;
+  } else {
+    delete dayPlan.mealId;
+    delete dayPlan.takeaway;
+  }
+  plan[day] = dayPlan;
+  await setDoc(ref("app/weekPlan"), plan);
+}
+
+window.assignTakeaway = async function(day, val) {
+  const plan = {...STATE.weekPlan};
+  const dayPlan = {...getPlanForDay(day), takeaway: val};
+  plan[day] = dayPlan;
+  await setDoc(ref("app/weekPlan"), plan);
+}
+
+window.assignDessert = async function(day, val) {
+  const plan = {...STATE.weekPlan};
+  const dayPlan = {...getPlanForDay(day)};
+  if (val) dayPlan.dessert = val; else delete dayPlan.dessert;
+  plan[day] = dayPlan;
+  await setDoc(ref("app/weekPlan"), plan);
+}
+
+window.assignLollies = async function(day, val) {
+  const plan = {...STATE.weekPlan};
+  const dayPlan = {...getPlanForDay(day)};
+  if (val) dayPlan.lollies = val; else delete dayPlan.lollies;
+  plan[day] = dayPlan;
+  await setDoc(ref("app/weekPlan"), plan);
+}
+
+window.markCooked = function(day) {
+  const plan = getPlanForDay(day);
+  const meal = STATE.meals.find(m=>m.id===plan.mealId);
+  if (!meal) return;
+  const modal = document.getElementById("cook-modal");
+  modal.style.display = "flex";
+  const components = [...(meal.components||[])];
+  modal.innerHTML = `
+    <div style="background:var(--card);border-radius:18px;padding:20px;width:100%;max-width:420px;margin:20px;border:2px solid var(--accent);max-height:90vh;overflow-y:auto">
+      <div style="font-weight:800;font-size:17px;margin-bottom:4px">✓ Mark as Cooked</div>
+      <div style="font-size:12px;color:var(--muted);margin-bottom:14px">${meal.name} — tick ingredients to deduct from pantry</div>
+      <div id="cook-ingredients" style="display:flex;flex-direction:column;gap:8px;margin-bottom:16px">
+        ${components.map((comp)=>{
+          const inPantry = STATE.pantry.find(p=>p.name.toLowerCase()===comp.toLowerCase());
+          return '<label style="display:flex;align-items:center;gap:10px;background:var(--surface);border-radius:10px;padding:10px 12px;cursor:pointer;border:1px solid '+(inPantry?'#22c55e40':'var(--border)')+'"><input type="checkbox" '+(inPantry?'checked':'')+' data-comp="'+comp.replace(/"/g,"&quot;")+'" style="width:18px;height:18px;accent-color:var(--accent)"><div style="flex:1"><div style="font-size:13px;font-weight:600">'+comp+'</div>'+(inPantry?'<div style="font-size:11px;color:var(--green)">✓ In pantry x'+((inPantry.qty||1)%1===0?inPantry.qty||1:(inPantry.qty||1).toFixed(1))+'</div>':'<div style="font-size:11px;color:var(--muted)">Not in pantry</div>')+'</div></label>';
+        }).join('')}
+      </div>
+      ${plan.dessert?'<div style="background:var(--surface);border-radius:10px;padding:10px 12px;margin-bottom:16px;font-size:13px">🍨 <strong>'+plan.dessert+'</strong> will also be deducted</div>':''}
+      <div style="display:flex;gap:8px">
+        <button class="btn btn-accent flex1" onclick="confirmCooked('${day}')">✓ Confirm Cooked</button>
+        <button class="btn btn-outline" onclick="document.getElementById('cook-modal').style.display='none'">Cancel</button>
+      </div>
+    </div>`;
+}
+
+window.confirmCooked = async function(day) {
+  const plan = getPlanForDay(day);
+  const meal = STATE.meals.find(m=>m.id===plan.mealId);
+  if (!meal) return;
+  const snapshot = STATE.pantry.map(p=>({...p}));
+  const checkboxes = document.querySelectorAll('#cook-ingredients input[type=checkbox]');
+  const toDeduct = [];
+  checkboxes.forEach(cb=>{ if(cb.checked) toDeduct.push(cb.getAttribute('data-comp')); });
+  for (const comp of toDeduct) {
+    const p = STATE.pantry.find(x=>x.name.toLowerCase()===comp.toLowerCase());
+    if (p) {
+      const newQty = (p.qty||1) - 1;
+      if (newQty <= 0) await fsDel("pantry/"+p.id);
+      else await updateDoc(doc(db,"pantry",p.id), {qty: newQty});
+    }
+  }
+  if (plan.dessert) {
+    const dp = STATE.pantry.find(x=>x.name===plan.dessert);
+    if (dp) {
+      const newQty = (dp.qty||1) - 1;
+      if (newQty <= 0) await fsDel("pantry/"+dp.id);
+      else await updateDoc(doc(db,"pantry",dp.id), {qty: newQty});
+    }
+  }
+  const cooked = {...STATE.cookedMeals, [day]:true};
+  await setDoc(ref("app/cookedMeals"), cooked);
+  sessionStorage.setItem("undo_day", day);
+  sessionStorage.setItem("undo_snapshot", JSON.stringify(snapshot));
+  document.getElementById("cook-modal").style.display="none";
+  const t = document.getElementById("toast");
+  t.innerHTML = meal.name+' cooked \u{1F373} &nbsp;<button onclick="undoCooked()" style="background:#fff3;border:none;color:#fff;border-radius:6px;padding:3px 10px;cursor:pointer;font-weight:700;font-size:13px">\u21A9 Undo</button>';
+  t.className = "show";
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(()=>{ t.className=""; t.innerHTML=""; }, 8000);
+}
+
+window.undoCooked = async function(dayArg) {
+  // Called either from toast (no arg, uses sessionStorage) or from card button (day passed)
+  const day = dayArg || sessionStorage.getItem("undo_day");
+  if (!day) return;
+  // Try to restore pantry snapshot if available
+  const snapshot = JSON.parse(sessionStorage.getItem("undo_snapshot")||"[]");
+  if (snapshot.length) {
+    for (const item of snapshot) {
+      await setDoc(doc(db,"pantry",item.id), item);
+    }
+    sessionStorage.removeItem("undo_snapshot");
+  }
+  const cooked = {...STATE.cookedMeals};
+  delete cooked[day];
+  await setDoc(ref("app/cookedMeals"), cooked);
+  sessionStorage.removeItem("undo_day");
+  showToast("Undone! ↩ " + day + " unmarked");
+}
+
+
+window.generateShoppingList = async function() {
+  const items = new Set();
+  Object.entries(STATE.weekPlan).forEach(([day, plan]) => {
+    const mealId = typeof plan === "string" ? plan : plan.mealId;
+    const m = STATE.meals.find(x=>x.id===mealId);
+    if (m) m.components.forEach(c=>items.add(c));
+    // Add dessert if not in pantry
+    const dessert = typeof plan === "object" ? plan.dessert : null;
+    if (dessert && !STATE.pantry.find(p=>p.name===dessert)) items.add(dessert);
+    // Add lollies if Friday and not in pantry
+    const lollies = typeof plan === "object" ? plan.lollies : null;
+    if (lollies && !STATE.pantry.find(p=>p.name===lollies)) items.add(lollies);
+  });
+  STATE.staples.forEach(s=>{ if(daysDue(s.lastBought,s.frequencyDays)<=0) items.add(s.name+" (staple)"); });
+  // Clear existing list
+  for (const item of STATE.shoppingList) await fsDel("shoppingList/"+item.docId);
+  // Add new
+  for (const name of items) {
+    const id = "si_"+Date.now()+"_"+Math.random().toString(36).slice(2);
+    const inPantry = STATE.pantry.some(p=>p.name.toLowerCase()===name.toLowerCase());
+    await setDoc(doc(db,"shoppingList",id), {name, checked:false, inPantry});
+  }
+  showTab('shopping');
+  showToast("Shopping list generated! 🛒");
+}
+
+// ── SHOPPING ──────────────────────────────────────────────────────────────────
+function renderShopping() {
+  const el = document.getElementById("shopping-list");
+  const unchecked = STATE.shoppingList.filter(x=>!x.checked);
+  const checked = STATE.shoppingList.filter(x=>x.checked);
+  let html = '';
+  if (!STATE.shoppingList.length) {
+    html = `<div class="card" style="text-align:center;padding:24px;color:var(--muted)"><div style="font-size:40px;margin-bottom:8px">🛒</div>Generate from the Meal Planner to populate your list</div>`;
+  }
+  unchecked.forEach(item => {
+    html += `<div class="shop-item ${item.inPantry?'in-pantry':''}">
+      <div class="checkbox" onclick="toggleShopItem('${item.docId}')"></div>
+      <div class="flex1">
+        <div style="font-size:14px;font-weight:600">${item.name}</div>
+        ${item.inPantry?`<div style="font-size:11px;color:var(--green)">✓ In pantry</div>`:''}
+      </div>
+      <button class="btn-ghost" style="font-size:16px" onclick="removeShopItem('${item.docId}')" title="Remove">×</button>
+    </div>`;
+  });
+  if (checked.length) {
+    html += `<div style="font-size:12px;color:var(--muted);font-weight:700;margin:12px 0 8px">CHECKED OFF (${checked.length})</div>`;
+    checked.forEach(item => {
+      html += `<div class="shop-item" style="opacity:0.5;cursor:pointer" onclick="toggleShopItem('${item.docId}')">
+        <div class="checkbox checked">✓</div>
+        <div style="font-size:14px;text-decoration:line-through">${item.name}</div>
+      </div>`;
+    });
+  }
+  el.innerHTML = html;
+}
+
+window.addShopItem = async function() {
+  const input = document.getElementById("shop-input");
+  const name = input.value.trim();
+  if (!name) return;
+  const id = "si_"+Date.now();
+  await setDoc(doc(db,"shoppingList",id), {name, checked:false, inPantry:false});
+  input.value = "";
+}
+
+window.toggleShopItem = async function(docId) {
+  const item = STATE.shoppingList.find(x=>x.docId===docId);
+  if (!item) return;
+  await updateDoc(doc(db,"shoppingList",docId), {checked:!item.checked});
+}
+
+window.removeShopItem = async function(docId) {
+  await fsDel("shoppingList/"+docId);
+}
+
+// ── PANTRY categories & emoji map ────────────────────────────────────────────
+const PANTRY_CATEGORIES = [
+  { id:"fridge",    label:"🥛 Fridge",       color:"#60a5fa",
+    keywords:["milk","cheese","yoghurt","butter","cream","egg","sour cream","fetta","mozzarella","brie","camembert","ricotta","goats","burrata","bacon","ham","deli"] },
+  { id:"meat",      label:"🥩 Meat & Fish",  color:"#f87171",
+    keywords:["mince","beef","chicken","pork","lamb","sausage","schnitzel","steak","tuna","sardine","salmon","kangaroo","fish","prawn","meatball","livers"] },
+  { id:"fruit",     label:"🍎 Fruit",         color:"#fb923c",
+    keywords:["apple","banana","mango","strawberr","blueberr","blackberr","grape","pear","orange","mandarin","lemon","avocado","pineapple","berry","fruit"] },
+  { id:"veg",       label:"🥦 Vegetables",   color:"#4ade80",
+    keywords:["broccoli","carrot","zucchini","capsicum","spinach","rocket","lettuce","tomato","corn","potato","sweet potato","celery","cucumber","onion","pea","bean","mushroom","spring onion","pumpkin","cauliflower"] },
+  { id:"frozen",    label:"🧊 Frozen",        color:"#67e8f9",
+    keywords:["frozen","ice cream","drumstick","gaytime","twin pole","connoisseur","magnum","weis","wedge","pizza slice","tenders","icy pole"] },
+  { id:"treats",    label:"🍬 Treats & Snacks", color:"#f472b6",
+    keywords:["chocolate","lolly","lollies","candy","chip","popcorn","cracker","biscuit","snack","jatz","shapes","rice cake","muesli bar","drumstick mini","caramel","caramello","twirl","maltese","m&m","skittle","starburst","snake","party mix","sour patch","freddo","tim tam","oreo"] },
+  { id:"pantry",    label:"🫙 Pantry & Dry",  color:"#fbbf24",
+    keywords:["pasta","rice","flour","sugar","oil","sauce","passata","tomato","tuna","sardine","beans","corn","soup","noodle","stock","vinegar","mustard","mayo","ketchup","soy","teriyaki","honey","jam","spread","salt","pepper","spice","seasoning","taco","wrap","pitta","bread","crumb","breadcrumb","crackers"] },
+  { id:"pet",       label:"🐕 Pet",           color:"#a78bfa",
+    keywords:["dog","cat","pet","flea","paws","nature's gift","premiyum","vip paws"] },
+  { id:"household", label:"🧹 Household",     color:"#94a3b8",
+    keywords:["detergent","dishwasher","laundry","toilet","paper","towel","handwash","body wash","shampoo","conditioner","toothpaste","toothbrush","cleaner","spray","bag","wrap"] },
+];
+
+const ITEM_EMOJI = {
+  milk:"🥛", cheese:"🧀", egg:"🥚", butter:"🧈", yoghurt:"🫙", "sour cream":"🥛",
+  beef:"🥩", chicken:"🍗", pork:"🥩", sausage:"🌭", schnitzel:"🍗", lamb:"🥩", mince:"🥩",
+  broccoli:"🥦", carrot:"🥕", potato:"🥔", tomato:"🍅", corn:"🌽", onion:"🧅", garlic:"🧄",
+  capsicum:"🫑", spinach:"🥬", lettuce:"🥬", mushroom:"🍄", cucumber:"🥒", pea:"🫛",
+  apple:"🍎", banana:"🍌", mango:"🥭", strawberr:"🍓", blueberr:"🫐", grape:"🍇",
+  avocado:"🥑", lemon:"🍋", orange:"🍊", pineapple:"🍍", pear:"🍐",
+  pasta:"🍝", rice:"🍚", bread:"🍞", flour:"🌾", sugar:"🍬", oil:"🫙",
+  chocolate:"🍫", lolly:"🍬", chip:"🍟", popcorn:"🍿", ice:"🍨", frozen:"🧊",
+  dog:"🐕", cat:"🐈", pet:"🐾",
+};
+
+function getItemEmoji(name) {
+  const n = name.toLowerCase();
+  for (const [key, emoji] of Object.entries(ITEM_EMOJI)) {
+    if (n.includes(key)) return emoji;
+  }
+  return "📦";
+}
+
+function getCategoryForItem(name) {
+  const n = name.toLowerCase();
+  for (const cat of PANTRY_CATEGORIES) {
+    if (cat.keywords.some(k => n.includes(k))) return cat;
+  }
+  return { id:"other", label:"📦 Other", color:"var(--muted)" };
+}
+
+// Open Food Facts image cache
+const offImageCache = {};
+async function fetchOFFImage(name) {
+  if (offImageCache[name] !== undefined) return offImageCache[name];
+  offImageCache[name] = null; // prevent duplicate fetches
+  try {
+    const q = encodeURIComponent(name.replace(/\s*\d+g|\s*\d+ml|\s*\d+l|\s*\d+kg/gi,"").trim());
+    const res = await fetch(`https://world.openfoodfacts.org/cgi/search.pl?search_terms=${q}&search_simple=1&action=process&json=1&fields=product_name,image_front_small_url&page_size=1&countries_tags=australia`);
+    const data = await res.json();
+    const product = data.products && data.products[0];
+    const imgUrl = product && product.image_front_small_url;
+    offImageCache[name] = imgUrl || null;
+    if (imgUrl) {
+      // Re-render pantry with the new image
+      renderPantry();
+    }
+  } catch(e) { offImageCache[name] = null; }
+  return offImageCache[name];
+}
+
+// ── PANTRY ────────────────────────────────────────────────────────────────────
+function renderPantry() {
+  const grid = document.getElementById("pantry-grid");
+  const total = STATE.pantry.length;
+  const lowStock = STATE.pantry.filter(p=>(p.qty||1)<=1).length;
+  document.getElementById("pantry-count").innerHTML = `<span>${total} items in pantry</span>${lowStock?` <span style="color:var(--red);font-size:11px;font-weight:700;margin-left:8px">⚠️ ${lowStock} low stock</span>`:''}`;
+
+  if (!STATE.pantry.length) {
+    grid.innerHTML = `<div style="text-align:center;padding:24px;color:var(--muted)"><div style="font-size:40px;margin-bottom:8px">🏠</div>Scan a receipt or add items manually</div>`;
+    return;
+  }
+
+  // Group by category
+  const groups = {};
+  STATE.pantry.forEach(item => {
+    const cat = getCategoryForItem(item.name);
+    if (!groups[cat.id]) groups[cat.id] = { cat, items:[] };
+    groups[cat.id].items.push(item);
+  });
+
+  let html = '';
+  for (const {cat, items} of Object.values(groups)) {
+    html += `<div style="margin-bottom:16px">
+      <div style="font-size:12px;font-weight:800;color:${cat.color};margin-bottom:8px;padding-bottom:4px;border-bottom:2px solid ${cat.color}40">${cat.label} (${items.length})</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+        ${items.map(item => {
+          const qty = item.qty || 1;
+          const isLow = qty <= 1;
+          const emoji = getItemEmoji(item.name);
+          const cachedImg = offImageCache[item.name];
+
+          // Trigger background image fetch for packaged items (non-fresh)
+          const isFresh = ["fruit","veg"].includes(getCategoryForItem(item.name).id);
+          if (!isFresh && cachedImg === undefined) fetchOFFImage(item.name);
+
+          return `<div style="background:var(--card);border-radius:12px;padding:10px;border:1px solid ${isLow?'var(--red)40':'var(--border)'}">
+            <div style="display:flex;align-items:flex-start;gap:6px;margin-bottom:8px">
+              ${cachedImg
+                ? `<img src="${cachedImg}" style="width:36px;height:36px;object-fit:contain;border-radius:6px;flex-shrink:0" onerror="this.style.display='none'">`
+                : `<span style="font-size:28px;flex-shrink:0;line-height:1">${emoji}</span>`}
+              <div style="flex:1;min-width:0">
+                <div style="font-size:12px;font-weight:700;line-height:1.3;word-break:break-word">${item.name}</div>
+                ${isLow?`<div style="font-size:10px;color:var(--red);font-weight:700">⚠️ Low stock</div>`:''}
+              </div>
+              <button onclick="removePantryItem('${item.id}')" style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:16px;padding:0;line-height:1;flex-shrink:0">×</button>
+            </div>
+            <div style="display:flex;align-items:center;gap:4px">
+              <button onclick="adjustPantryItemQty('${item.id}',-0.5)" style="background:var(--surface);border:1px solid var(--border);border-radius:6px;color:var(--accent);width:26px;height:26px;cursor:pointer;font-size:16px;display:flex;align-items:center;justify-content:center;flex-shrink:0">−</button>
+              <span style="flex:1;text-align:center;font-size:13px;font-weight:700;color:${isLow?'var(--red)':'var(--accent)'}">×${qty%1===0?qty:qty.toFixed(1)}</span>
+              <button onclick="adjustPantryItemQty('${item.id}',0.5)" style="background:var(--surface);border:1px solid var(--border);border-radius:6px;color:var(--accent);width:26px;height:26px;cursor:pointer;font-size:16px;display:flex;align-items:center;justify-content:center;flex-shrink:0">+</button>
+            </div>
+          </div>`;
+        }).join('')}
+      </div>
+    </div>`;
+  }
+  grid.innerHTML = html;
+}
+
+// Pantry search/autocomplete
+window.onPantrySearch = function() {
+  const val = document.getElementById("pantry-input").value.trim().toLowerCase();
+  const box = document.getElementById("pantry-suggestions");
+  if (!val) { box.style.display="none"; return; }
+  const matches = STATE.pantry.filter(p => p.name.toLowerCase().includes(val));
+  if (!matches.length) { box.style.display="none"; return; }
+  box.innerHTML = matches.map(p => {
+    const qty = p.qty || 1;
+    return `<div onclick="selectPantryItem('${p.id}')" style="padding:10px 14px;cursor:pointer;border-bottom:1px solid var(--border);font-size:14px;display:flex;justify-content:space-between;align-items:center">
+      <span>${p.name}</span><span style="color:var(--accent);font-size:12px">×${qty % 1===0?qty:qty.toFixed(1)} in pantry</span>
+    </div>`;
+  }).join('');
+  box.style.display="block";
+}
+
+window.onPantryKey = function(e) {
+  if (e.key==='Enter') { addPantryItem(); document.getElementById("pantry-suggestions").style.display="none"; }
+  if (e.key==='Escape') { document.getElementById("pantry-suggestions").style.display="none"; }
+}
+
+window.selectPantryItem = async function(id) {
+  const item = STATE.pantry.find(p=>p.id===id);
+  if (!item) return;
+  const addQty = parseFloat(document.getElementById("pantry-qty").value) || 1;
+  const newQty = (item.qty || 1) + addQty;
+  await updateDoc(doc(db,"pantry",id), {qty: newQty});
+  document.getElementById("pantry-input").value = "";
+  document.getElementById("pantry-qty").value = "1";
+  document.getElementById("pantry-suggestions").style.display="none";
+  showToast(`${item.name} updated: ×${newQty % 1===0?newQty:newQty.toFixed(1)}`);
+}
+
+window.adjustPantryQty = function(delta) {
+  const input = document.getElementById("pantry-qty");
+  const val = Math.max(0.5, (parseFloat(input.value)||1) + delta);
+  input.value = val % 1 === 0 ? val : val.toFixed(1);
+}
+
+window.adjustPantryItemQty = async function(id, delta) {
+  const item = STATE.pantry.find(p=>p.id===id);
+  if (!item) return;
+  const newQty = Math.max(0, (item.qty||1) + delta);
+  if (newQty === 0) { await fsDel("pantry/"+id); return; }
+  await updateDoc(doc(db,"pantry",id), {qty: newQty});
+}
+
+window.addPantryItem = async function() {
+  const input = document.getElementById("pantry-input");
+  const name = input.value.trim();
+  if (!name) return;
+  const qty = parseFloat(document.getElementById("pantry-qty").value) || 1;
+  // Check if item already exists (case-insensitive)
+  const existing = STATE.pantry.find(p => p.name.toLowerCase() === name.toLowerCase());
+  if (existing) {
+    const newQty = (existing.qty||1) + qty;
+    await updateDoc(doc(db,"pantry",existing.id), {qty: newQty});
+    showToast(`${existing.name} updated: ×${newQty % 1===0?newQty:newQty.toFixed(1)}`);
+  } else {
+    const id = "p_"+Date.now();
+    await setDoc(doc(db,"pantry",id), {id, name, qty, addedAt: new Date().toISOString()});
+    showToast(`${name} added to pantry`);
+  }
+  input.value = "";
+  document.getElementById("pantry-qty").value = "1";
+  document.getElementById("pantry-suggestions").style.display="none";
+}
+
+window.removePantryItem = async function(id) {
+  await fsDel("pantry/"+id);
+}
+
+window.scanReceipt = async function(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+  const btn = document.getElementById("scan-btn");
+  btn.disabled = true; btn.textContent = "⏳ Scanning…";
+  try {
+    const base64 = await new Promise((res,rej)=>{
+      const r = new FileReader();
+      r.onload = ()=>res(r.result.split(",")[1]);
+      r.onerror = rej;
+      r.readAsDataURL(file);
+    });
+    const text = await callAIWithImage(base64, file.type||"image/jpeg",
+      "This is a supermarket receipt. Extract all grocery/food/household items purchased. Return ONLY a JSON array of item name strings. No quantities, prices, markdown. Example: [\"milk\",\"bread\",\"chicken breast\"]");
+    const clean = text.replace(/```json|```/g,"").trim();
+    const items = JSON.parse(clean);
+    let added = 0;
+    for (const name of items) {
+      if (!STATE.pantry.find(p=>p.name.toLowerCase()===name.toLowerCase())) {
+        const id = "p_"+Date.now()+"_"+Math.random().toString(36).slice(2);
+        await setDoc(doc(db,"pantry",id), {id, name, qty:1, addedAt:new Date().toISOString()});
+        added++;
+      }
+    }
+    showToast(`Added ${added} items from receipt 📄`);
+  } catch(err) {
+    showToast("Couldn't read receipt — try a clearer photo", true);
+  }
+  btn.disabled = false; btn.textContent = "📷 Receipt";
+  e.target.value = "";
+}
+
+// ── MEALS ─────────────────────────────────────────────────────────────────────
+function renderMeals() {
+  const el = document.getElementById("meals-list");
+  el.innerHTML = STATE.meals.map(m => {
+    const hits = allergenCheck(m.components);
+    return `<div class="card ${hits.length?'border-red':''}">
+      <div class="row-between">
+        <div class="flex1">
+          <div style="font-weight:700;font-size:15px;margin-bottom:4px">${m.name} <span class="meal-meta">⏱ ${m.time}min</span></div>
+          <div style="margin-bottom:4px">${m.tags.map(tagHtml).join('')}</div>
+          <div class="meal-components">${m.components.join(' · ')}</div>
+          ${hits.length?`<div style="background:#ef444420;border:1px solid #ef444440;border-radius:6px;padding:4px 8px;margin-top:6px;font-size:12px;color:var(--red)">⚠️ Allergen: ${hits.join(', ')}</div>`:''}
+        </div>
+        <button class="btn-ghost" onclick="removeMeal('${m.id}')">×</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+window.toggleAddMeal = function() {
+  const f = document.getElementById("add-meal-form");
+  f.style.display = f.style.display==="none"?"block":"none";
+}
+
+window.saveMeal = async function() {
+  const name = document.getElementById("meal-name").value.trim();
+  if (!name) return;
+  const components = document.getElementById("meal-components").value.split(",").map(x=>x.trim()).filter(Boolean);
+  const time = Number(document.getElementById("meal-time").value)||30;
+  const id = "m_"+Date.now();
+  await setDoc(doc(db,"meals",id), {id, name, components, time, tags:["kids-approved"]});
+  document.getElementById("meal-name").value="";
+  document.getElementById("meal-components").value="";
+  document.getElementById("add-meal-form").style.display="none";
+  showToast("Meal added! 🍽️");
+}
+
+window.removeMeal = async function(id) {
+  await fsDel("meals/"+id);
+}
+
+let suggestions = [];
+
+// ── Woolworths-inspired curated meal library ─────────────────────────────────
+const MEAL_LIBRARY = [
+  {name:"Cheesy Tomato Rice", components:["white rice","tinned tomatoes","baby spinach","bocconcini","garlic","onion"], time:25, tags:["kids-approved","healthy","quick"], source:"Woolworths"},
+  {name:"Pumpkin Mac & Cheese", components:["macaroni pasta","pumpkin","tasty cheese","milk","butter","flour"], time:20, tags:["pasta","kids-approved","quick"], source:"Woolworths"},
+  {name:"Healthier Rainbow Pizzas", components:["pizza bases","tomato paste","mozzarella","capsicum","corn","zucchini","cherry tomatoes"], time:25, tags:["kids-approved","build-your-own"], source:"Woolworths"},
+  {name:"Chicken Fried Rice", components:["chicken breast","white rice","broccoli","capsicum","carrot","soy sauce","eggs","garlic"], time:25, tags:["healthy","adults-love","kids-approved"], source:"Woolworths"},
+  {name:"Honey Soy Chicken Tray Bake", components:["chicken thighs","soy sauce","honey","garlic","sweet potato","broccoli","olive oil"], time:35, tags:["healthy","adults-love","quick"], source:"Woolworths"},
+  {name:"Beef & Veggie Meatball Pasta", components:["beef mince","breadcrumbs","egg","zucchini","carrot","tomato passata","spaghetti","parmesan"], time:35, tags:["pasta","kids-approved"], source:"Woolworths"},
+  {name:"Chicken Quesadillas", components:["chicken breast","wraps","tasty cheese","corn","capsicum","sour cream","salsa"], time:20, tags:["kids-approved","build-your-own","quick"], source:"Woolworths"},
+  {name:"Beef Nachos", components:["corn chips","beef mince","tinned tomatoes","taco seasoning","tasty cheese","sour cream","salsa","avocado"], time:25, tags:["kids-approved","build-your-own"], source:"Woolworths"},
+  {name:"Pasta Carbonara", components:["spaghetti","bacon","eggs","parmesan","garlic"], time:20, tags:["pasta","kids-approved","quick"], source:"Woolworths"},
+  {name:"Honey Sausages & Mash", components:["beef sausages","potato","butter","milk","peas","honey","soy sauce"], time:30, tags:["kids-approved","quick"], source:"Woolworths"},
+  {name:"Pork & Veggie Stir Fry", components:["pork mince","broccoli","carrot","capsicum","soy sauce","garlic","white rice","spring onion"], time:20, tags:["healthy","adults-love","quick"], source:"Woolworths"},
+  {name:"Mini Chicken Meatball Pasta", components:["chicken breast","breadcrumbs","egg","tomato passata","penne","parmesan","basil"], time:30, tags:["pasta","kids-approved"], source:"Woolworths"},
+  {name:"Sausage & Veggie Tray Bake", components:["beef sausages","sweet potato","zucchini","capsicum","olive oil","garlic","tomato sauce"], time:35, tags:["kids-approved","quick"], source:"Woolworths"},
+  {name:"Greek Lamb Salad Wraps", components:["lamb mince","cucumber","cherry tomatoes","fetta","baby spinach","lemon","olive oil","wraps"], time:20, tags:["adults-love","healthy","quick"], source:"Woolworths"},
+  {name:"Sheet Pan Schnitzel & Salad", components:["chicken breast","breadcrumbs","egg","flour","lemon","baby spinach","cherry tomatoes"], time:30, tags:["kids-approved","healthy"], source:"Woolworths"},
+];
+
+window.getSuggestions = function() {
+  const existing = STATE.meals.map(m=>m.name.toLowerCase());
+  suggestions = MEAL_LIBRARY.filter(m => !existing.includes(m.name.toLowerCase()));
+  renderSuggestions();
+  showToast(suggestions.length + " meal ideas ready! ✨");
+}
+
+window.getAISuggestions = async function() {
+  const btn = document.getElementById("ai-suggest-btn");
+  btn.disabled=true; btn.textContent="⏳ Thinking…";
+  try {
+    const pantryList = STATE.pantry.map(p=>p.name).join(", ");
+    const aiText2 = await callAI([{role:"user",content:"You are helping an Australian family plan dinners. Two kids aged 9 and 11 with autism (fussy eaters). Shop at Woolworths SA. Love pasta, sausages, steak, tacos, burritos. Adults like salads, Mediterranean, Asian. NO sesame, NO tree nuts. Under 40 min. Pantry has: "+pantryList+". Suggest 5 NEW dinners not already suggested. Return ONLY a JSON array: [{\"name\":\"\",\"components\":[],\"time\":25,\"tags\":[],\"source\":\"AI\"}]. Tags: pasta,kids-approved,adults-love,quick,build-your-own,healthy. Simple Woolworths ingredients. Raw JSON only."}]);
+    const aiMeals = JSON.parse(aiText2.replace(/```json|```/g,"").trim());
+    suggestions = [...suggestions, ...aiMeals];
+    renderSuggestions();
+    showToast("AI added more ideas! 🤖");
+  } catch(e) { showToast("AI: "+e.message, true); }
+  btn.disabled=false; btn.textContent="🤖 More from AI";
+}
+
+function pantryStockCheck(components) {
+  const inStock = [], needed = [];
+  (components||[]).forEach(c => {
+    const cl = c.toLowerCase();
+    const found = STATE.pantry.find(p => {
+      const pl = p.name.toLowerCase();
+      return pl.includes(cl.split(" ")[0]) || cl.includes(pl.split(" ")[0]);
+    });
+    if (found) inStock.push({name:c, qty:found.qty||1});
+    else needed.push(c);
+  });
+  return {inStock, needed};
+}
+
+function renderSuggestions() {
+  const el = document.getElementById("suggestions-list");
+  if (!suggestions.length) { el.innerHTML=""; return; }
+  el.innerHTML = `
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+      <div style="font-size:13px;color:var(--accent);font-weight:700">${suggestions.length} ideas — tap Preview</div>
+      <button class="btn btn-outline btn-sm" id="ai-suggest-btn" onclick="getAISuggestions()">🤖 More from AI</button>
+    </div>`
+    + suggestions.map((s,i)=>{
+      const hits = allergenCheck(s.components||[]);
+      const {inStock, needed} = pantryStockCheck(s.components||[]);
+      const total = s.components.length||1;
+      const pct = Math.round(inStock.length/total*100);
+      const barColor = pct>60?"var(--green)":pct>30?"var(--yellow)":"var(--red)";
+      const srcColor = s.source==="Woolworths"?"#22c55e":"#a78bfa";
+      return `<div class="card border-accent" style="margin-bottom:8px">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px">
+          <div style="flex:1">
+            <div style="font-weight:700;font-size:15px;margin-bottom:4px">
+              ${s.name}
+              <span class="meal-meta" style="margin-left:6px">⏱ ${s.time}min</span>
+              <span style="background:${srcColor}20;color:${srcColor};font-size:10px;padding:2px 6px;border-radius:10px;margin-left:4px">${s.source||"Custom"}</span>
+            </div>
+            <div style="margin-bottom:4px">${(s.tags||[]).map(tagHtml).join("")}</div>
+            <div style="display:flex;align-items:center;gap:8px;margin-top:6px">
+              <div style="flex:1;height:5px;background:var(--border);border-radius:3px">
+                <div style="width:${pct}%;height:5px;background:${barColor};border-radius:3px"></div>
+              </div>
+              <span style="font-size:11px;color:var(--muted);white-space:nowrap">${inStock.length}/${total} in pantry</span>
+            </div>
+            ${hits.length?`<div style="color:var(--red);font-size:12px;margin-top:4px;font-weight:700">⚠️ Allergen: ${hits.join(", ")}</div>`:""}
+          </div>
+          <div style="display:flex;flex-direction:column;gap:4px;align-items:flex-end">
+            <button class="btn btn-accent btn-sm" onclick="previewSuggestion(${i})" ${hits.length?"disabled":""}>Preview</button>
+            <button class="btn-ghost" style="font-size:18px" onclick="dismissSuggestion(${i})">×</button>
+          </div>
+        </div>
+      </div>`;
+    }).join("");
+}
+
+window.previewSuggestion = function(i) {
+  const s = suggestions[i];
+  if (allergenCheck(s.components||[]).length) return;
+  const {inStock, needed} = pantryStockCheck(s.components||[]);
+  const el = document.getElementById("meal-preview");
+  el.style.display="block";
+  el.innerHTML = `
+    <div class="card" style="border:2px solid var(--accent);margin-bottom:12px">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:12px">
+        <div>
+          <div style="font-weight:800;font-size:17px">${s.name}</div>
+          <div style="font-size:12px;color:var(--muted);margin-top:2px">⏱ ${s.time} min · ${(s.tags||[]).map(tagHtml).join("")}</div>
+        </div>
+        <button class="btn-ghost" onclick="document.getElementById('meal-preview').style.display='none'">×</button>
+      </div>
+      ${inStock.length?`
+        <div style="margin-bottom:10px">
+          <div style="font-size:12px;font-weight:700;color:var(--green);margin-bottom:6px">✓ IN YOUR PANTRY (${inStock.length})</div>
+          <div style="display:flex;flex-wrap:wrap;gap:6px">
+            ${inStock.map(it=>`<span style="background:#22c55e20;color:var(--green);border:1px solid #22c55e40;border-radius:8px;padding:4px 10px;font-size:12px">✓ ${it.name} <span style="opacity:0.6">×${it.qty%1===0?it.qty:it.qty.toFixed(1)}</span></span>`).join("")}
+          </div>
+        </div>`:""}
+      ${needed.length?`
+        <div style="margin-bottom:12px">
+          <div style="font-size:12px;font-weight:700;color:var(--yellow);margin-bottom:6px">🛒 NEED TO BUY (${needed.length})</div>
+          <div style="display:flex;flex-wrap:wrap;gap:6px">
+            ${needed.map(it=>`<span style="background:#eab30820;color:var(--yellow);border:1px solid #eab30840;border-radius:8px;padding:4px 10px;font-size:12px">${it}</span>`).join("")}
+          </div>
+        </div>`:""}
+      <div style="display:flex;gap:8px">
+        <button class="btn btn-accent flex1" onclick="addSuggestion(${i})">+ Add to My Meals</button>
+        ${needed.length?`<button class="btn btn-outline" onclick="addSuggestionToShopping(${i})">🛒 Add needed</button>`:""}
+      </div>
+    </div>`;
+  el.scrollIntoView({behavior:"smooth",block:"nearest"});
+}
+
+window.dismissSuggestion = function(i) {
+  suggestions.splice(i,1);
+  renderSuggestions();
+}
+
+window.addSuggestion = async function(i) {
+  const s = suggestions[i];
+  const id = "m_"+Date.now();
+  await setDoc(doc(db,"meals",id), {id, name:s.name, components:s.components||[], time:s.time, tags:s.tags||["kids-approved"]});
+  suggestions.splice(i,1);
+  renderSuggestions();
+  document.getElementById("meal-preview").style.display="none";
+  showToast(s.name+" added to your meals 🍽️");
+}
+
+window.addSuggestionToShopping = async function(i) {
+  const s = suggestions[i];
+  const {needed} = pantryStockCheck(s.components||[]);
+  for (const name of needed) {
+    if (!STATE.shoppingList.find(x=>x.name.toLowerCase()===name.toLowerCase())) {
+      const id = "si_"+Date.now()+"_"+Math.random().toString(36).slice(2);
+      await setDoc(doc(db,"shoppingList",id), {name, checked:false, inPantry:false});
+    }
+  }
+  showToast(needed.length+" items added to shopping 🛒");
+}
+
+
+// ── STAPLES ───────────────────────────────────────────────────────────────────
+function renderStaples() {
+  const el = document.getElementById("staples-list");
+  el.innerHTML = STATE.staples.map(s => {
+    const dLeft = daysDue(s.lastBought, s.frequencyDays);
+    const isDue = dLeft<=0, isSoon = dLeft>0&&dLeft<=7;
+    const cls = isDue?'border-red':isSoon?'border-yellow':'';
+    const status = isDue
+      ? `<span style="color:var(--red);font-weight:700">⚠️ Due now!</span>`
+      : isSoon
+      ? `<span style="color:var(--yellow);font-weight:700">⏰ Due in ${dLeft} days</span>`
+      : s.lastBought
+      ? `<span style="color:var(--muted)">✓ ${dLeft} days remaining</span>`
+      : `<span style="color:var(--red)">Never tracked — mark when bought</span>`;
+    return `<div class="card ${cls}">
+      <div class="row-between">
+        <div class="flex1">
+          <div style="font-weight:700;font-size:15px">${s.name}</div>
+          <div style="font-size:12px;color:var(--muted)">Every ${s.frequencyDays} days</div>
+          <div style="font-size:12px;margin-top:4px">${status}</div>
+        </div>
+        <div class="row" style="gap:8px">
+          <button class="btn btn-green btn-sm" onclick="markBought('${s.id}')">✓ Bought</button>
+          <button class="btn-ghost" onclick="removeStaple('${s.id}')">×</button>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function renderDueBadge() {
+  const due = STATE.staples.filter(s=>daysDue(s.lastBought,s.frequencyDays)<=0);
+  const badge = document.getElementById("due-badge");
+  if (due.length) { badge.style.display="block"; badge.textContent=`⏰ ${due.length} due`; }
+  else badge.style.display="none";
+}
+
+window.markBought = async function(id) {
+  await updateDoc(doc(db,"staples",id), {lastBought:new Date().toISOString()});
+  showToast("Marked as bought ✓");
+}
+
+window.toggleAddStaple = function() {
+  const f = document.getElementById("add-staple-form");
+  f.style.display = f.style.display==="none"?"block":"none";
+}
+
+window.saveStaple = async function() {
+  const name = document.getElementById("staple-name").value.trim();
+  if (!name) return;
+  const freq = Number(document.getElementById("staple-freq").value)||30;
+  const id = "s_"+Date.now();
+  await setDoc(doc(db,"staples",id), {id, name, frequencyDays:freq, lastBought:null});
+  document.getElementById("staple-name").value="";
+  document.getElementById("add-staple-form").style.display="none";
+  showToast("Staple added!");
+}
+
+window.removeStaple = async function(id) {
+  await fsDel("staples/"+id);
+}
+
+// ── ALLERGENS ─────────────────────────────────────────────────────────────────
+function renderAllergens() {
+  const el = document.getElementById("allergens-list");
+  el.innerHTML = STATE.allergens.map(a => `
+    <div class="allergen-chip">
+      <span>⚠️ ${a}</span>
+      <button class="btn-ghost" style="color:var(--red);font-size:16px;line-height:1" onclick="removeAllergen('${a}')">×</button>
+    </div>`).join('');
+}
+
+window.addAllergen = async function() {
+  const input = document.getElementById("allergen-input");
+  const name = input.value.trim().toLowerCase();
+  if (!name || STATE.allergens.includes(name)) return;
+  await setDoc(doc(db,"allergens",name.replace(/\s/g,"_")), {name});
+  input.value="";
+  showToast(`${name} added to allergen list`);
+}
+
+window.removeAllergen = async function(name) {
+  await fsDel("allergens/"+name.replace(/\s/g,"_"));
+  showToast(`${name} removed`, false);
+}
+
+// ── RECIPE FROM URL ──────────────────────────────────────────────────────────
+window.fetchRecipeURL = async function() {
+  const urlInput = document.getElementById("recipe-url");
+  const url = urlInput.value.trim();
+  if (!url || !url.startsWith("http")) { showToast("Please paste a valid URL", true); return; }
+
+  const btn = document.getElementById("fetch-recipe-btn");
+  btn.disabled=true; btn.textContent="⏳ Fetching…";
+
+  const result = document.getElementById("recipe-result");
+  result.style.display="block";
+  result.innerHTML=`<div class="card" style="text-align:center;padding:24px;color:var(--muted)"><div class="spinner" style="margin:0 auto 12px"></div>Reading recipe and matching to Woolworths…</div>`;
+
+  try {
+    // Use Claude to fetch and parse the recipe via its knowledge + URL
+    const pantryList = STATE.pantry.map(p=>p.name).join(", ");
+    const allergenList = STATE.allergens.join(", ");
+
+    const recipePrompt = `I need you to help me extract a recipe from this URL: ${url}
+
+If you can access it, extract the recipe. If not, use your knowledge of common recipes with that name.
+
+For each ingredient:
+1. Suggest the closest Woolworths Australia product (generic where possible e.g. "beef mince 500g")
+2. Round up to nearest pack size (400g tin, 500g pack, 1kg bag etc)
+3. Mark inPantry:true if likely in this pantry: ${pantryList}
+4. Flag allergenWarnings if any of these present: ${allergenList}
+
+Return ONLY valid JSON, no markdown:
+{"name":"Recipe Name","time":30,"servings":4,"tags":["kids-approved"],"allergenWarnings":[],"ingredients":[{"original":"2 cloves garlic","woolworths":"Garlic bulb","packSize":"1 bulb","inPantry":true}]}`;
+
+    const text = await callAI([{role:"user", content:recipePrompt}]);
+    const clean = text.replace(/```json|```/g,"").trim();
+
+    let recipe;
+    try { recipe = JSON.parse(clean); }
+    catch(e) {
+      // Try to extract JSON from the text
+      const match = clean.match(/\{[\s\S]*\}/);
+      if (match) recipe = JSON.parse(match[0]);
+      else throw new Error("Couldn't parse recipe — try a different URL");
+    }
+
+    renderRecipeResult(recipe, url);
+
+  } catch(e) {
+    result.innerHTML=`<div class="card border-red"><div style="color:var(--red);font-weight:700">⚠️ Couldn't read that recipe</div><div style="font-size:13px;color:var(--muted);margin-top:6px">${e.message}</div><div style="font-size:12px;color:var(--muted);margin-top:8px">Try copying the recipe text and using the manual Add Meal button instead.</div></div>`;
+  }
+
+  btn.disabled=false; btn.textContent="🔍 Get Recipe";
+}
+
+function renderRecipeResult(recipe, sourceUrl) {
+  const result = document.getElementById("recipe-result");
+  const inPantry = (recipe.ingredients||[]).filter(i=>i.inPantry);
+  const needed = (recipe.ingredients||[]).filter(i=>!i.inPantry);
+  const hasAllergens = (recipe.allergenWarnings||[]).length > 0;
+
+  result.innerHTML = `
+    <div class="card" style="border:2px solid var(--accent);margin-bottom:12px">
+
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:12px">
+        <div>
+          <div style="font-weight:800;font-size:17px">${recipe.name||"Recipe"}</div>
+          <div style="font-size:12px;color:var(--muted);margin-top:2px">
+            ⏱ ${recipe.time||"?"}min · 👨‍👩‍👧‍👦 ${recipe.servings||4} servings
+            ${(recipe.tags||[]).map(t=>`<span class="tag" style="background:var(--accent)20;color:var(--accent)">${t}</span>`).join("")}
+          </div>
+        </div>
+        <a href="${sourceUrl}" target="_blank" style="color:var(--muted);font-size:11px;text-decoration:none">View original ↗</a>
+      </div>
+
+      ${hasAllergens ? `
+        <div style="background:var(--red)20;border:1px solid var(--red)40;border-radius:8px;padding:8px 12px;margin-bottom:12px">
+          <div style="color:var(--red);font-weight:700;font-size:13px">⚠️ Allergen Warning</div>
+          <div style="color:var(--red);font-size:12px">${recipe.allergenWarnings.join(", ")}</div>
+        </div>` : ""}
+
+      ${inPantry.length ? `
+        <div style="margin-bottom:12px">
+          <div style="font-size:12px;font-weight:700;color:var(--green);margin-bottom:8px">✓ ALREADY IN PANTRY (${inPantry.length})</div>
+          <div style="display:flex;flex-direction:column;gap:6px">
+            ${inPantry.map(i=>`
+              <div style="display:flex;align-items:center;gap:8px;background:var(--surface);border-radius:8px;padding:8px 10px">
+                <span style="color:var(--green);font-size:14px">✓</span>
+                <div style="flex:1">
+                  <div style="font-size:13px;font-weight:600">${i.woolworths}</div>
+                  <div style="font-size:11px;color:var(--muted)">${i.original}</div>
+                </div>
+                <span style="font-size:11px;color:var(--muted)">${i.packSize||""}</span>
+              </div>`).join("")}
+          </div>
+        </div>` : ""}
+
+      ${needed.length ? `
+        <div style="margin-bottom:12px">
+          <div style="font-size:12px;font-weight:700;color:var(--yellow);margin-bottom:8px">🛒 ADD TO SHOPPING LIST (${needed.length})</div>
+          <div style="display:flex;flex-direction:column;gap:6px" id="recipe-needed-list">
+            ${needed.map((i,idx)=>`
+              <div style="display:flex;align-items:center;gap:8px;background:var(--surface);border-radius:8px;padding:8px 10px" id="rni-${idx}">
+                <input type="checkbox" checked onchange="toggleRecipeItem(${idx})" style="width:18px;height:18px;accent-color:var(--accent)">
+                <div style="flex:1">
+                  <div style="font-size:13px;font-weight:600">${i.woolworths}</div>
+                  <div style="font-size:11px;color:var(--muted)">${i.original}</div>
+                </div>
+                <span style="font-size:11px;color:var(--muted);background:var(--card);padding:2px 8px;border-radius:6px">${i.packSize||""}</span>
+              </div>`).join("")}
+          </div>
+        </div>` : ""}
+
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <button class="btn btn-accent flex1" onclick="addRecipeToMeals(${JSON.stringify(recipe).replace(/"/g,'&quot;')})">+ Add to My Meals</button>
+        ${needed.length ? `<button class="btn btn-outline flex1" onclick="addRecipeToShopping(${JSON.stringify(needed).replace(/"/g,'&quot;')})">🛒 Add checked to list</button>` : ""}
+      </div>
+    </div>`;
+
+  // Store for checkbox toggling
+  window._recipeNeeded = needed;
+}
+
+window._recipeChecked = {};
+window.toggleRecipeItem = function(idx) {
+  window._recipeChecked[idx] = !document.getElementById("rni-"+idx).querySelector("input").checked;
+}
+
+window.addRecipeToMeals = async function(recipeStr) {
+  let recipe;
+  try { recipe = typeof recipeStr === "string" ? JSON.parse(recipeStr.replace(/&quot;/g,'"')) : recipeStr; }
+  catch(e) { showToast("Error adding meal",true); return; }
+  const id = "m_"+Date.now();
+  const components = (recipe.ingredients||[]).map(i=>i.woolworths||i.original).filter(Boolean);
+  await setDoc(doc(db,"meals",id), {
+    id, name:recipe.name, components, time:recipe.time||30,
+    tags: recipe.tags||["kids-approved"]
+  });
+  showToast(recipe.name+" added to meals 🍽️");
+}
+
+window.addRecipeToShopping = async function(neededStr) {
+  let needed;
+  try { needed = typeof neededStr === "string" ? JSON.parse(neededStr.replace(/&quot;/g,'"')) : neededStr; }
+  catch(e) { showToast("Error",true); return; }
+  // Only add checked items
+  const checkboxes = document.querySelectorAll("#recipe-needed-list input[type=checkbox]");
+  let added = 0;
+  for (let idx=0; idx<needed.length; idx++) {
+    const cb = checkboxes[idx];
+    if (!cb || !cb.checked) continue;
+    const item = needed[idx];
+    const name = item.woolworths || item.original;
+    if (!STATE.shoppingList.find(x=>x.name.toLowerCase()===name.toLowerCase())) {
+      const id = "si_"+Date.now()+"_"+Math.random().toString(36).slice(2);
+      await setDoc(doc(db,"shoppingList",id), {name, checked:false, inPantry:false, packSize:item.packSize||""});
+      added++;
+    }
+  }
+  showToast(added+" items added to shopping list 🛒");
+}
+
+// Close pantry suggestions on outside click
+document.addEventListener('click', function(e) {
+  if (!e.target.closest('#tab-pantry')) {
+    const box = document.getElementById("pantry-suggestions");
+    if (box) box.style.display="none";
+  }
+});
+</script>
+
+<script>
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('./service-worker.js')
+      .then(reg => console.log('Service Worker registered:', reg))
+      .catch(err => console.log('Service Worker registration failed:', err));
+  });
+}
+</script>
+</body>
+</html>
