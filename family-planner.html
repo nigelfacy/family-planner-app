@@ -100,6 +100,7 @@
   .sync-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--green); display: inline-block; margin-right: 6px; animation: pulse 2s infinite; }
   @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
 </style>
+<script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
 </head>
 <body>
 
@@ -1362,31 +1363,73 @@ window.scanReceipt = async function(e) {
   if (!file) return;
   const btn = document.getElementById("scan-btn");
   btn.disabled = true; btn.textContent = "⏳ Scanning…";
+  
   try {
-    const base64 = await new Promise((res,rej)=>{
-      const r = new FileReader();
-      r.onload = ()=>res(r.result.split(",")[1]);
-      r.onerror = rej;
-      r.readAsDataURL(file);
+    // Use Tesseract.js for client-side OCR (free, no API key needed)
+    const result = await Tesseract.recognize(file, 'eng', {
+      logger: m => {
+        if (m.status === 'recognizing text') {
+          btn.textContent = `⏳ ${Math.round(m.progress * 100)}%`;
+        }
+      }
     });
-    const text = await callAIWithImage(base64, file.type||"image/jpeg",
-      "This is a supermarket receipt. Extract all grocery/food/household items purchased. Return ONLY a JSON array of item name strings. No quantities, prices, markdown. Example: [\"milk\",\"bread\",\"chicken breast\"]");
-    const clean = text.replace(/```json|```/g,"").trim();
-    const items = JSON.parse(clean);
+    
+    const text = result.data.text;
+    console.log("OCR Result:", text); // Debug output
+    
+    // Parse grocery items from receipt text
+    const items = parseReceiptItems(text);
+    console.log("Parsed items:", items); // Debug output
+    
+    // Add to SHOPPING LIST (not pantry - bug fix)
     let added = 0;
     for (const name of items) {
-      if (!STATE.pantry.find(p=>p.name.toLowerCase()===name.toLowerCase())) {
-        const id = "p_"+Date.now()+"_"+Math.random().toString(36).slice(2);
-        await setDoc(doc(db,"pantry",id), {id, name, qty:1, addedAt:new Date().toISOString()});
+      if (!STATE.shopping.find(i => i.name.toLowerCase() === name.toLowerCase())) {
+        const id = "s_" + Date.now() + "_" + Math.random().toString(36).slice(2);
+        await setDoc(doc(db, "shopping", id), {
+          id,
+          name,
+          checked: false,
+          addedAt: new Date().toISOString(),
+          fromReceipt: true
+        });
         added++;
       }
     }
+    
     showToast(`Added ${added} items from receipt 📄`);
+    renderShoppingList(); // Refresh the shopping list display
   } catch(err) {
+    console.error("Receipt scan error:", err);
     showToast("Couldn't read receipt — try a clearer photo", true);
   }
   btn.disabled = false; btn.textContent = "📷 Receipt";
   e.target.value = "";
+}
+
+function parseReceiptItems(text) {
+  // Split by lines, filter grocery-like items
+  const lines = text.split('\n')
+    .map(l => l.trim())
+    .filter(l => l.length > 2 && l.length < 50);  
+  
+  const items = [];
+  const stopWords = ['total', 'subtotal', 'tax', 'change', 'cash', 'card', 'thank', 'receipt', 'date', 'time', 'balance', 'item', 'qty', 'price'];  
+  
+  for (const line of lines) {
+    const lower = line.toLowerCase();
+    // Skip if contains price only or stop words
+    if (stopWords.some(w => lower.includes(w))) continue;
+    if (/^\$?\d+\.?\d*$/.test(line)) continue;
+    
+    // Extract item name (remove quantity/price from start)
+    let item = line.replace(/^\d+[\s*x]+/, '').replace(/[\d\.,\$]+$/, '').trim();
+    if (item.length > 2 && item.length < 40) {
+      items.push(item);
+    }
+  }
+  
+  return [...new Set(items)]; // Remove duplicates
 }
 
 // ── MEALS ─────────────────────────────────────────────────────────────────────
