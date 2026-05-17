@@ -1087,6 +1087,19 @@ window.removeShopItem = async function(docId) {
   await fsDel("shoppingList/"+docId);
 }
 
+window.clearPurchased = async function() {
+  const purchased = STATE.shoppingList.filter(x=>x.checked);
+  if (!purchased.length) {
+    showToast("No items checked off!");
+    return;
+  }
+  if (!confirm(`Remove ${purchased.length} purchased item(s)?`)) return;
+  for (const item of purchased) {
+    await fsDel("shoppingList/"+item.docId);
+  }
+  showToast(`🗑️ Removed ${purchased.length} purchased item(s)`);
+}
+
 window.copyShoppingList = function() {
   if (!STATE.shoppingList.length) {
     showToast("No items to copy!");
