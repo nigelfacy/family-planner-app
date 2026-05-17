@@ -18,6 +18,8 @@ A privacy-first, offline-capable meal planning app designed for a family of 4 in
 - **Smart Shopping List** — Auto-generated from meal plan, categorized by aisle
 - **Pantry Tracker** — Track ingredients with expiry dates and quantities
 - **Woolworths Integration** — Seeded with Woolworths receipt history
+- **🔍 Woolworths Search Links** — One-click search for each shopping item
+- **📋 Copy List** — Copy shopping list to clipboard for easy reference
 - **Staples Reminders** — Get notified when essentials need repurchasing
 
 ### Dietary & Safety
@@ -115,9 +117,11 @@ Or manually: Firebase Console → Firestore Database → Rules → Paste `firest
 ### Generating a Shopping List
 1. Plan your meals for the week in the **Planner** tab
 2. Go to **🛒 Shopping** tab
-3. Click "Generate from Planner" — the list auto-populates from meal ingredients
+3. Click **"🛒 Generate from Planner"** — the list auto-populates from meal ingredients
 4. Check off items as you shop
 5. Filter by: All, Pending, Purchased, or by aisle (Produce, Dairy, etc.)
+6. Click **"🔍"** next to any item to search it on Woolworths website
+7. Click **"📋 Copy List"** button to copy all items to clipboard
 
 ### Managing Pantry & Staples
 1. **🥫 Pantry** → Add ingredients with quantities and expiry dates
@@ -200,10 +204,9 @@ family-planner-app/
 ### Future Ideas
 - [ ] Weekly spend estimates (Woolworths price integration)
 - [ ] Barcode scanner for pantry items
-- [ ] Woolworths online ordering integration
+- [ ] Woolworths online ordering integration (beyond search links)
 - [ ] Multiple user profiles (kids can view but not edit)
 - [ ] Recipe nutrition calculations
-- [ ] Export shopping list to Woolworths app
 
 ## 👨‍👩‍👧‍👦 Family Context
 
