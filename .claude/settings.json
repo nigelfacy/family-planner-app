@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "home-assistant": {
+      "type": "http",
+      "url": "http://homeassistant.local:9583/REPLACE_WITH_YOUR_SECRET_PATH"
+    }
+  }
+}
