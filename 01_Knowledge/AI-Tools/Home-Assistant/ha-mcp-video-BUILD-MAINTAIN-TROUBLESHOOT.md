@@ -157,6 +157,47 @@ ignore_entities:           # suppress noisy sensors
 
 Agent replies appear as **persistent notifications** in HA.
 
+### Connecting Hermes to ha-mcp (84+ tools — recommended over native 4)
+
+Instead of only the 4 native HA tools above, Hermes can connect to the ha-mcp add-on as a full MCP server, gaining access to all 84+ tools including automation creation, traces, dashboards, HACS, blueprints, and more.
+
+Add to `~/.hermes/config.yaml`:
+
+```yaml
+mcp_servers:
+  home-assistant:
+    url: "http://192.168.1.100:9583/private_zctpwlX7ZkIAr7oqdfLPxw"
+    # For smaller/local models, whitelist only what you need:
+    tools:
+      include:
+        - list_automations
+        - get_automation
+        - create_automation
+        - get_automation_trace
+        - list_entities
+        - call_service
+      resources: false
+      prompts: false
+```
+
+Or via the catalog (if ha-mcp is listed):
+
+```bash
+hermes mcp install home-assistant
+hermes mcp catalog   # browse available servers
+```
+
+Tools register as `mcp_home_assistant_<tool_name>` (e.g., `mcp_home_assistant_create_automation`).
+
+After any config change: `/reload-mcp` in Hermes chat, or restart Hermes.
+
+**Verify:** Ask Hermes `"what MCP tools do you have for Home Assistant?"` — should list 84+ tools if ha-mcp is connected.
+
+> **Which to use?**
+> - **4 native tools** — lightweight control, real-time WebSocket events, agent notifications in HA
+> - **ha-mcp via MCP** — full build/debug/dashboard capabilities, 84+ tools, but no WebSocket gateway
+> - **Both together** — run both; native tools handle real-time events, ha-mcp handles config/debug tasks
+
 ---
 
 ## Automation Examples
@@ -238,14 +279,20 @@ Uses the energy management tools to fetch entity IDs and build an energy card la
 
 ## Claude Code vs Hermes Agent — Comparison
 
-| Aspect | Claude (Sonnet 4.6) | Hermes Agent |
-|--------|---------------------|--------------|
-| Model type | Cloud API | Local (Ollama/vLLM/etc.) |
-| Tool count | 84+ via ha-mcp | 4 native HA tools |
-| Privacy | Data leaves device | Fully local |
-| Real-time events | Polling only | WebSocket gateway |
-| Best for | Complex config/debug | Lightweight control + notifications |
-| Cost | API tokens | Free (hardware cost) |
+| Aspect | Claude (Sonnet 4.6) | Hermes (native 4 tools) | Hermes + ha-mcp MCP |
+|--------|---------------------|------------------------|---------------------|
+| Model type | Cloud API | Local | Local |
+| Tool count | 84+ via ha-mcp | 4 | 84+ |
+| Privacy | Data leaves device | Fully local | Fully local |
+| Real-time events | Polling only | WebSocket gateway ✅ | WebSocket gateway ✅ |
+| Automation creation | ✅ | ❌ | ✅ |
+| Debug traces | ✅ | ❌ | ✅ |
+| Dashboard building | ✅ | ❌ | ✅ |
+| HA notifications | ❌ | ✅ | ✅ (with native gateway) |
+| Cost | API tokens | Free | Free |
+| Config complexity | Low | Low | Medium |
+
+> **Best combo:** Hermes with both native HA tools (for WebSocket events + notifications) AND ha-mcp connected as an MCP server (for full 84-tool config/debug/build capability). Run `hermes gateway` for real-time events; use ha-mcp tools for everything else.
 
 ---
 
@@ -305,6 +352,9 @@ Public demo (no HA instance needed): `https://ha-mcp-demo-server.qc-h.net` with 
 - **FAQ / Troubleshooting:** https://homeassistant-ai.github.io/ha-mcp/faq/
 - **ha-mcp Add-on DOCS.md:** https://github.com/homeassistant-ai/ha-mcp/blob/master/homeassistant-addon/DOCS.md
 - **Hermes Agent HA Docs:** https://github.com/NousResearch/hermes-agent/blob/main/website/docs/user-guide/messaging/homeassistant.md
+- **Hermes MCP Feature Docs:** https://hermes-agent.nousresearch.com/docs/user-guide/features/mcp
+- **Hermes + MCP Guide:** https://github.com/NousResearch/hermes-agent/blob/main/website/docs/guides/use-mcp-with-hermes.md
+- **Hermes Integrations:** https://hermes-agent.nousresearch.com/docs/integrations/
 - **HA Official MCP Integration:** https://www.home-assistant.io/integrations/mcp_server/
 - **HA Community Thread:** https://community.home-assistant.io/t/brand-new-claude-ai-chatgpt-integration-ha-mcp/937847
 - **SmartHomeScene Guide:** https://smarthomescene.com/guides/home-assistant-mcp-server-complete-guide/
