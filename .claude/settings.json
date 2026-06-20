@@ -1,8 +1,20 @@
 {
   "mcpServers": {
     "home-assistant": {
-      "type": "http",
-      "url": "http://homeassistant.local:9583/REPLACE_WITH_YOUR_SECRET_PATH"
+      "command": "uvx",
+      "args": ["ha-mcp@latest"],
+      "env": {
+        "HOMEASSISTANT_URL": "http://100.83.181.21:8123",
+        "HOMEASSISTANT_TOKEN": "REPLACE_WITH_LONG_LIVED_TOKEN"
+      }
+    },
+    "home-assistant-lan": {
+      "command": "uvx",
+      "args": ["ha-mcp@latest"],
+      "env": {
+        "HOMEASSISTANT_URL": "http://192.168.245.166:8123",
+        "HOMEASSISTANT_TOKEN": "REPLACE_WITH_LONG_LIVED_TOKEN"
+      }
     }
   }
 }
