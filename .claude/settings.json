@@ -5,7 +5,7 @@
       "args": ["ha-mcp@latest"],
       "env": {
         "HOMEASSISTANT_URL": "http://100.83.181.21:8123",
-        "HOMEASSISTANT_TOKEN": "REPLACE_WITH_LONG_LIVED_TOKEN"
+        "HOMEASSISTANT_TOKEN": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJkZmQ1MzJlOTViZWQ0YTBiOWYzNjJiNTBlOWY2NGIxNyIsImlhdCI6MTc4MTQxNTY5MywiZXhwIjoyMDk2Nzc1NjkzfQ.TKdPlBa97Lwkh2eWmTuOg3OljleTa5wFIrywkbv7PYM"
       }
     },
     "home-assistant-lan": {
@@ -13,7 +13,7 @@
       "args": ["ha-mcp@latest"],
       "env": {
         "HOMEASSISTANT_URL": "http://192.168.245.166:8123",
-        "HOMEASSISTANT_TOKEN": "REPLACE_WITH_LONG_LIVED_TOKEN"
+        "HOMEASSISTANT_TOKEN": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJkZmQ1MzJlOTViZWQ0YTBiOWYzNjJiNTBlOWY2NGIxNyIsImlhdCI6MTc4MTQxNTY5MywiZXhwIjoyMDk2Nzc1NjkzfQ.TKdPlBa97Lwkh2eWmTuOg3OljleTa5wFIrywkbv7PYM"
       }
     }
   }
