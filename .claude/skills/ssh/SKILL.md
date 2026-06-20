@@ -30,7 +30,8 @@ $ARGUMENTS
 
 HA config directory: `/config/` (HAOS) or `/homeassistant/` depending on install type.
 Hermes config: `~/.hermes/.env`
-Common secrets locations: `/config/secrets.yaml`, `~/.hermes/.env`, `~/secrets.ini`, `~/.env`
+OpenClaw secrets: `~/.openclaw/workspace/.ha_env` ← HA long-lived token lives here
+Common secrets locations: `~/.openclaw/workspace/.ha_env`, `/config/secrets.yaml`, `~/.hermes/.env`, `~/.env`
 
 ---
 
